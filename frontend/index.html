@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Tourist Access Control System - Sistema de control de acceso turístico">
+  <title>Tourist Access | Control System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="screen active">
+    <div class="login-container">
+      <div class="login-card glass-card">
+        <div class="login-header">
+          <div class="logo-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="22" stroke="url(#grad1)" stroke-width="3"/>
+              <path d="M16 24L22 30L34 18" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs><linearGradient id="grad1" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+            </svg>
+          </div>
+          <h1>Tourist Access</h1>
+          <p class="subtitle">Sistema de Control de Acceso</p>
+        </div>
+        <form id="login-form" autocomplete="off">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="correo@ejemplo.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <input type="password" id="login-password" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn-primary" id="login-btn">
+            <span>Iniciar Sesión</span>
+            <div class="btn-loader hidden"></div>
+          </button>
+          <p id="login-error" class="error-msg hidden"></p>
+        </form>
+      </div>
+      <div class="login-bg-decoration">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app-screen" class="screen">
+    <!-- Sidebar -->
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="22" stroke="url(#grad2)" stroke-width="3"/>
+            <path d="M16 24L22 30L34 18" stroke="url(#grad2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs><linearGradient id="grad2" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+          </svg>
+          <span>Tourist Access</span>
+        </div>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-item active" data-page="dashboard" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-page="tickets" id="nav-tickets" data-roles="ADMIN,CASHIER">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+          <span>Tickets</span>
+        </button>
+        <button class="nav-item" data-page="create-ticket" id="nav-create-ticket" data-roles="ADMIN,CASHIER">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span>Crear Ticket</span>
+        </button>
+        <button class="nav-item" data-page="validate" id="nav-validate" data-roles="GUARD">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span>Escanear QR</span>
+        </button>
+        <button class="nav-item" data-page="users" id="nav-users" data-roles="ADMIN">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Usuarios</span>
+        </button>
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">A</div>
+          <div class="user-details">
+            <span class="user-email" id="user-email">admin@tourist.com</span>
+            <span class="user-role" id="user-role">ADMIN</span>
+          </div>
+        </div>
+        <button class="btn-logout" id="logout-btn" title="Cerrar sesión">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+
+      <!-- ══ DASHBOARD ══════════════════════════════════════ -->
+      <section id="page-dashboard" class="page active">
+        <div class="page-header">
+          <div>
+            <h2>Dashboard</h2>
+            <p class="page-subtitle">Resumen general del sistema</p>
+          </div>
+          <!-- Date filter -->
+          <div class="page-actions">
+            <div class="filter-group">
+              <input type="date" id="dash-date-from" class="select-input" style="width:160px" title="Desde">
+              <input type="date" id="dash-date-to" class="select-input" style="width:160px" title="Hasta">
+              <button class="btn-secondary" id="dash-apply-filter">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Filtrar
+              </button>
+              <button class="btn-secondary" id="dash-clear-filter">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-amber"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-used-today">0</span><span class="stat-label">Visitantes (Período)</span></div></div>
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-cyan"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-revenue-today">₲0</span><span class="stat-label">Ingresos (Período)</span></div></div>
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-pink"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-sold-today">0</span><span class="stat-label">Vendidos (Período)</span></div></div>
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-green"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-active">0</span><span class="stat-label">Tickets Activos</span></div></div>
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-purple"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-revenue">₲0</span><span class="stat-label">Ingresos Totales</span></div></div>
+          <div class="stat-card glass-card"><div class="stat-icon stat-icon-blue"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div><div class="stat-info"><span class="stat-value" id="stat-total">0</span><span class="stat-label">Total Tickets</span></div></div>
+        </div>
+
+        <!-- Payment Method Revenue breakdown -->
+        <div class="section-header" style="margin-top:2rem;">
+          <h3>Ingresos por Método de Pago</h3>
+        </div>
+        <div class="payment-breakdown glass-card" id="payment-breakdown">
+          <div class="payment-method-item"><span class="pm-icon pm-cash">💵</span><span class="pm-label">Efectivo</span><span class="pm-value" id="pm-cash">₲0</span></div>
+          <div class="payment-method-item"><span class="pm-icon pm-transfer">🏦</span><span class="pm-label">Transferencia</span><span class="pm-value" id="pm-transfer">₲0</span></div>
+          <div class="payment-method-item"><span class="pm-icon pm-qr">📱</span><span class="pm-label">QR</span><span class="pm-value" id="pm-qr">₲0</span></div>
+          <div class="payment-method-item"><span class="pm-icon pm-card">💳</span><span class="pm-label">Tarjeta</span><span class="pm-value" id="pm-card">₲0</span></div>
+        </div>
+
+        <!-- Recent Entries -->
+        <div class="section-header" style="margin-top:2rem;">
+          <h3>Últimas Entradas</h3>
+        </div>
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead><tr><th>Hora</th><th>Cliente</th><th>Tipo</th><th>Pago</th><th>Guardia</th></tr></thead>
+            <tbody id="recent-entries-tbody"><tr><td colspan="5" class="table-empty">Sin entradas recientes</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ══ TICKETS PAGE ══════════════════════════════════ -->
+      <section id="page-tickets" class="page">
+        <div class="page-header">
+          <h2>Tickets</h2>
+          <div class="page-actions" style="flex-wrap:wrap;gap:.5rem;">
+            <select id="tickets-filter-status" class="select-input" style="width:150px">
+              <option value="">Todos los estados</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="USED">Usados</option>
+              <option value="CANCELLED">Cancelados</option>
+            </select>
+            <select id="tickets-filter-type" class="select-input" style="width:130px">
+              <option value="">Todos los tipos</option>
+              <option value="ADULT">Adulto</option>
+              <option value="CHILD">Niño</option>
+            </select>
+            <select id="tickets-filter-payment" class="select-input" style="width:140px">
+              <option value="">Todos los pagos</option>
+              <option value="CASH">Efectivo</option>
+              <option value="TRANSFER">Transferencia</option>
+              <option value="QR">QR</option>
+              <option value="CARD">Tarjeta</option>
+            </select>
+            <input type="date" id="tickets-filter-from" class="select-input" style="width:155px" title="Desde">
+            <input type="date" id="tickets-filter-to" class="select-input" style="width:155px" title="Hasta">
+            <button class="btn-secondary" id="tickets-refresh-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Buscar
+            </button>
+          </div>
+        </div>
+        <div class="table-container glass-card">
+          <table class="data-table" id="tickets-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Cliente</th><th>Tipo</th><th>Precio</th><th>Pago</th>
+                <th>Fecha Visita</th><th>Estado</th><th>Cajero</th><th>Token</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-tbody"><tr><td colspan="10" class="table-empty">Cargando tickets...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ══ CREATE TICKET ═════════════════════════════════ -->
+      <section id="page-create-ticket" class="page">
+        <div class="page-header">
+          <h2>Crear Ticket(s)</h2>
+          <p class="page-subtitle">Genera uno o múltiples tickets con QR en segundos</p>
+        </div>
+        <div class="form-container glass-card" style="max-width:720px">
+          <form id="create-ticket-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ticket-customer">Nombre del Cliente / Grupo (Opcional)</label>
+                <input type="text" id="ticket-customer" placeholder="Juan Pérez" autocomplete="off">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ticket-adults">Número de Adultos</label>
+                <input type="number" id="ticket-adults" min="0" max="50" value="1" class="qty-input">
+              </div>
+              <div class="form-group">
+                <label for="ticket-children">Número de Niños (Gratis)</label>
+                <input type="number" id="ticket-children" min="0" max="50" value="0" class="qty-input">
+                <span class="field-hint">Máx. 50 personas en total</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ticket-payment">Método de Pago</label>
+                <select id="ticket-payment" class="select-input" required>
+                  <option value="CASH">💵 Efectivo</option>
+                  <option value="TRANSFER">🏦 Transferencia</option>
+                  <option value="QR">📱 Código QR</option>
+                  <option value="CARD">💳 Tarjeta</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="ticket-date">Fecha de Visita</label>
+                <input type="date" id="ticket-date" required>
+              </div>
+            </div>
+            <div class="price-summary" id="price-summary">
+              <span>Total estimado:</span>
+              <strong id="price-total">₲10.000</strong>
+              <span id="price-breakdown" style="color:var(--text-muted);font-size:.8rem">(1 × ₲10.000)</span>
+            </div>
+            <button type="submit" class="btn-primary" id="create-ticket-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span id="create-btn-text">Generar Ticket + QR</span>
+            </button>
+          </form>
+
+          <!-- Results container (single or batch) -->
+          <div id="ticket-result" class="hidden" style="margin-top:1.5rem">
+            <div class="result-header" style="color:var(--success);display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <h3 id="result-title">Ticket Creado Exitosamente</h3>
+            </div>
+            <div id="ticket-result-cards"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ GUARD SCANNER ════════════════════════════════ -->
+      <section id="page-validate" class="page">
+        <div class="guard-scanner-container">
+          <div class="scanner-header">
+            <h2>Escanear QR de Acceso</h2>
+            <p>Apunte la cámara al código QR del ticket</p>
+          </div>
+          <div id="qr-scanner-wrapper">
+            <div id="qr-reader"></div>
+          </div>
+          <div class="scanner-fallback">
+            <form id="validate-form" class="manual-validate-form">
+              <input type="text" id="validate-token" placeholder="O pegue el token manualmente..." class="validate-manual-input">
+              <button type="submit" class="btn-secondary" id="validate-btn">Validar</button>
+            </form>
+          </div>
+          <div id="validate-overlay" class="validate-overlay hidden">
+            <div id="validate-overlay-content"></div>
+            <button id="validate-overlay-close" class="overlay-close-btn">Siguiente</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ USERS ═════════════════════════════════════════ -->
+      <section id="page-users" class="page">
+        <div class="page-header">
+          <h2>Gestión de Usuarios</h2>
+          <button class="btn-primary" id="show-register-btn" style="width:auto">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+            <span>Nuevo Usuario</span>
+          </button>
+        </div>
+        <div id="register-form-container" class="form-container glass-card hidden" style="margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem">Registrar Nuevo Usuario</h3>
+          <form id="register-form">
+            <div class="form-row">
+              <div class="form-group"><label for="reg-email">Email</label><input type="email" id="reg-email" placeholder="correo@ejemplo.com" required></div>
+              <div class="form-group"><label for="reg-password">Contraseña</label><input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reg-role">Rol</label>
+                <select id="reg-role" class="select-input" required>
+                  <option value="CASHIER">Cajero</option>
+                  <option value="GUARD">Guardia</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;gap:.5rem">
+                <button type="submit" class="btn-primary" id="register-btn" style="width:auto">Registrar</button>
+                <button type="button" class="btn-secondary" id="cancel-register-btn">Cancelar</button>
+              </div>
+            </div>
+          </form>
+          <p id="register-msg" class="hidden"></p>
+        </div>
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Email</th><th>Rol</th><th>Tickets Creados</th><th>Escaneos</th><th>Fecha Registro</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="6" class="table-empty">Cargando usuarios...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

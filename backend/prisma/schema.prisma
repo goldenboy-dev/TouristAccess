@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String   @default("CASHIER")
+  createdAt DateTime @default(now())
+
+  createdTickets Ticket[]
+  scans          Scan[]
+}
+
+model Ticket {
+  id            Int      @id @default(autoincrement())
+  token         String   @unique
+  customer_name String
+  ticket_type   String
+  group_id      String?
+  price         Float
+  visit_date    DateTime
+  status        String   @default("ACTIVE")
+  payment_method String  @default("CASH")
+
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scans Scan[]
+
+  @@index([token])
+  @@index([visit_date])
+  @@index([status])
+  @@index([group_id])
+}
+
+model Scan {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  guardId   Int
+  guard     User     @relation(fields: [guardId], references: [id])
+  scannedAt DateTime @default(now())
+}
