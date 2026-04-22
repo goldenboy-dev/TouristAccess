@@ -427,10 +427,11 @@
           <h3 style="margin-bottom:1rem">Registrar Nuevo Usuario</h3>
           <form id="register-form">
             <div class="form-row">
+              <div class="form-group"><label for="reg-name">Nombre completo</label><input type="text" id="reg-name" placeholder="Ej: María González" required minlength="2"></div>
               <div class="form-group"><label for="reg-email">Email</label><input type="email" id="reg-email" placeholder="correo@ejemplo.com" required></div>
-              <div class="form-group"><label for="reg-password">Contraseña</label><input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
             </div>
             <div class="form-row">
+              <div class="form-group"><label for="reg-password">Contraseña</label><input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
               <div class="form-group">
                 <label for="reg-role">Rol</label>
                 <select id="reg-role" class="select-input" required>
@@ -439,8 +440,10 @@
                   <option value="ADMIN">Administrador</option>
                 </select>
               </div>
-              <div class="form-group" style="display:flex;align-items:flex-end;gap:.5rem">
-                <button type="submit" class="btn-primary" id="register-btn" style="width:auto">Registrar</button>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="display:flex;align-items:flex-end;gap:.5rem;width:100%">
+                <button type="submit" class="btn-primary" id="register-btn" style="width:auto">Registrar Usuario</button>
                 <button type="button" class="btn-secondary" id="cancel-register-btn">Cancelar</button>
               </div>
             </div>
@@ -449,8 +452,8 @@
         </div>
         <div class="table-container glass-card">
           <table class="data-table">
-            <thead><tr><th>ID</th><th>Email</th><th>Rol</th><th>Tickets Creados</th><th>Escaneos</th><th>Fecha Registro</th></tr></thead>
-            <tbody id="users-tbody"><tr><td colspan="6" class="table-empty">Cargando usuarios...</td></tr></tbody>
+            <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Tickets</th><th>Escaneos</th><th>Registro</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="7" class="table-empty">Cargando usuarios...</td></tr></tbody>
           </table>
         </div>
       </section>

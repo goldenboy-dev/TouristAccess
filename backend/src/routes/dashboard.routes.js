@@ -10,6 +10,7 @@ router.get('/stats', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), dash
 
 // Get users list (Admin only)
 router.get('/users', authenticateToken, authorizeRoles('ADMIN'), dashboardController.getUsers);
+router.patch('/users/:id/name', authenticateToken, authorizeRoles('ADMIN'), dashboardController.updateUserName);
 
 // ── NEW: Anti-fraud panel routes (ADMIN only) ────────────────
 router.get('/fraud-summary',          authenticateToken, authorizeRoles('ADMIN'), fraudController.getFraudSummary);

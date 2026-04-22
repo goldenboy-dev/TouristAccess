@@ -1098,6 +1098,9 @@ body {
 .token-value { display:block; margin-top:.25rem; font-size:.68rem; color:var(--accent-primary); font-family:monospace; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
 .badge-payment { background:rgba(99,102,241,0.1); color:var(--accent-primary); border:1px solid rgba(99,102,241,0.25); padding:.25rem .6rem; border-radius:20px; font-size:.75rem; font-weight:600; white-space:nowrap; }
 .badge-info { background:var(--info-bg); color:var(--info); border:1px solid rgba(59,130,246,0.25); }
+.user-name-display { font-weight:600; }
+.btn-edit-name { background:none; border:none; cursor:pointer; font-size:.8rem; opacity:0.5; transition:opacity var(--transition); padding:0 .25rem; }
+.btn-edit-name:hover { opacity:1; }
 
 /* ============================================
    Badge Local & Visitor Type Overrides

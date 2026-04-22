@@ -12,7 +12,7 @@ import {
   handleCancelTicket, confirmAndCreate, hideConfirmationModal, handlePrint
 } from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
-import { loadUsers, handleRegister } from './features/users.js';
+import { loadUsers, handleRegister, handleEditName } from './features/users.js';
 
 export function navigateTo(pageId) {
   domRefs.pages.forEach(p => p.classList.remove('active'));
@@ -95,6 +95,7 @@ function setupEventListeners() {
     if (action === 'toggle-token') toggleToken(btn, btn.dataset.token);
     if (action === 'copy-token') copyToken(btn.dataset.token);
     if (action === 'cancel-ticket') handleCancelTicket(btn.dataset.id);
+    if (action === 'edit-name') handleEditName(parseInt(btn.dataset.id), btn.dataset.name);
 
     // Print buttons
     if (btn.classList.contains('print-btn') && btn.dataset.print) {
