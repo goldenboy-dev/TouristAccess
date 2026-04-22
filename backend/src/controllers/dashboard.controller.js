@@ -72,7 +72,7 @@ const getStats = async (req, res) => {
 const getUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, role: true, createdAt: true, _count: { select: { createdTickets: true, scans: true } } },
+      select: { id: true, email: true, name: true, role: true, createdAt: true, _count: { select: { createdTickets: true, scans: true } } },
       orderBy: { createdAt: 'desc' }
     });
     res.status(200).json({ users });

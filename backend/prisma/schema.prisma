@@ -9,6 +9,7 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
+  name      String   @default("")
   password  String
   role      String   @default("CASHIER")
   createdAt DateTime @default(now())
@@ -30,18 +31,12 @@ model Ticket {
   status         String   @default("ACTIVE")
   payment_method String   @default("CASH")
 
-  // Cédula de identidad — obligatorio para LOCAL, opcional para CHILD
   cedula         String?
-
-  // Guardia que validó la entrada
   guard_id       Int?
   guard          User?    @relation("TicketGuard", fields: [guard_id], references: [id])
-
-  // Confirmación del guardia para entradas gratuitas (CHILD/LOCAL)
-  free_confirmed    String?   // null | "CONFIRMED"
+  free_confirmed    String?
   free_confirmed_at DateTime?
 
-  // Relación con GroupSummary
   group_summary_id Int?
   groupSummary     GroupSummary? @relation(fields: [group_summary_id], references: [id])
 
@@ -58,6 +53,7 @@ model Ticket {
   @@index([status])
   @@index([group_id])
   @@index([visitor_type])
+  @@index([createdById])
 }
 
 model GroupSummary {
@@ -77,6 +73,8 @@ model GroupSummary {
   tickets         Ticket[]
 
   @@index([operation_code])
+  @@index([cajero_id])
+  @@index([visit_date])
 }
 
 model Scan {

@@ -1193,10 +1193,83 @@ body {
    ============================================ */
 .print-btn { font-size:.8rem !important; }
 @media print {
-  .sidebar,.page-header,.btn-primary,.btn-secondary,.print-btn,.summary-actions,.btn-free-confirm,.btn-free-reject,.btn-token-copy,#toast-container,.confirmation-modal { display:none !important; }
+  .sidebar,.page-header,.btn-primary,.btn-secondary,.print-btn,.summary-actions,.btn-free-confirm,.btn-free-reject,.btn-token-copy,#toast-container,.confirmation-modal,.fraud-panel { display:none !important; }
   .main-content { margin-left:0; padding:.5rem; }
   .page { display:block !important; }
   .group-summary-doc { border:2px solid #333; }
   .ticket-card { page-break-inside:avoid; border:1px solid #ccc; }
 }
+
+/* ============================================
+   FRAUD PANEL
+   ============================================ */
+.fraud-panel { margin-top:2.5rem; padding-top:2rem; border-top:2px solid var(--border-color); }
+.fraud-section-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; }
+.fraud-section-header h3 { font-size:1.25rem; font-weight:800; }
+.fraud-date-control { display:flex; align-items:center; gap:.5rem; }
+.fraud-date-control label { font-size:.85rem; color:var(--text-muted); font-weight:600; }
+.fraud-auto-badge { font-size:.68rem; background:rgba(42,157,78,0.12); color:var(--success); padding:.2rem .6rem; border-radius:20px; font-weight:700; }
+.fraud-subsection { margin-bottom:2rem; }
+.fraud-subsection-title { font-size:.95rem; font-weight:700; margin-bottom:.75rem; color:var(--text-secondary); }
+.fraud-subsection-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem; flex-wrap:wrap; gap:.5rem; }
+.fraud-empty-msg { text-align:center; padding:1.5rem; color:var(--text-muted); font-size:.9rem; }
+
+/* Alerts */
+.fraud-alerts-grid { display:flex; flex-direction:column; gap:.75rem; }
+.alert-card { padding:1rem 1.25rem; border-radius:var(--radius-sm); border-left:4px solid; animation:slideUp .2s ease-out; }
+.alert-critico { background:rgba(239,68,68,0.08); border-left-color:var(--danger); }
+.alert-aviso { background:rgba(244,140,47,0.08); border-left-color:var(--warning); }
+.alert-card-top { display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; }
+.alert-badge { font-size:.65rem; font-weight:800; padding:.15rem .5rem; border-radius:12px; text-transform:uppercase; letter-spacing:.04em; }
+.alert-badge-critico { background:rgba(239,68,68,0.2); color:var(--danger); }
+.alert-badge-aviso { background:rgba(244,140,47,0.2); color:var(--warning); }
+.alert-cajero { font-weight:700; font-size:.85rem; }
+.alert-mensaje { font-weight:600; font-size:.9rem; margin-bottom:.25rem; }
+.alert-detalle { font-size:.82rem; color:var(--text-muted); line-height:1.5; }
+
+/* Risk Table */
+.fraud-risk-table th { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+.risk-pct-bar { width:80px; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-right:.4rem; }
+.risk-pct-fill { height:100%; border-radius:3px; transition:width .3s ease; }
+.risk-badge { font-size:.7rem; font-weight:800; padding:.2rem .6rem; border-radius:12px; text-transform:uppercase; letter-spacing:.04em; }
+.risk-critico { background:rgba(239,68,68,0.15); color:var(--danger); }
+.risk-aviso { background:rgba(244,140,47,0.15); color:var(--warning); }
+.risk-normal { background:rgba(42,157,78,0.12); color:var(--success); }
+
+/* Cash Balance */
+.cash-bar-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.75rem; }
+.cash-bar-label { min-width:120px; font-size:.85rem; font-weight:600; }
+.cash-bar-track { flex:1; height:10px; background:rgba(255,255,255,0.06); border-radius:5px; overflow:hidden; }
+.cash-bar-fill { height:100%; border-radius:5px; transition:width .4s ease; }
+.cash-bar-values { font-size:.78rem; color:var(--text-secondary); white-space:nowrap; min-width:200px; text-align:right; }
+.cash-bar-brecha { color:var(--danger); font-weight:700; margin-left:.5rem; }
+.fraud-cash-total { margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--border-color); text-align:center; font-weight:700; }
+.cash-total-ok { color:var(--success); font-size:.95rem; }
+.cash-total-gap { color:var(--danger); font-size:1.1rem; }
+
+/* Evolution Chart */
+.evo-chart { background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-sm); position:relative; overflow:hidden; }
+.evo-limit-line { position:absolute; left:0; right:0; border-top:2px dashed var(--danger); z-index:2; opacity:.6; }
+.evo-limit-label { position:absolute; right:.5rem; top:-.6rem; font-size:.65rem; color:var(--danger); font-weight:700; background:var(--bg-primary); padding:0 .3rem; }
+.evo-y-mark { position:absolute; left:.25rem; z-index:1; }
+.evo-y-mark span { font-size:.6rem; color:var(--text-muted); font-weight:600; }
+.evo-bars-container { display:flex; align-items:flex-end; gap:4px; height:100%; padding:1.5rem 2rem 1.5rem 2.5rem; }
+.evo-hour-group { display:flex; align-items:flex-end; gap:2px; position:relative; padding-bottom:1.2rem; }
+.evo-bar { border-radius:3px 3px 0 0; min-height:2px; transition:height .3s ease; opacity:.85; }
+.evo-bar:hover { opacity:1; transform:scaleY(1.05); transform-origin:bottom; }
+.evo-bar-over { opacity:1; box-shadow:0 0 6px rgba(239,68,68,0.4); }
+.evo-hour-label { position:absolute; bottom:0; left:50%; transform:translateX(-50%); font-size:.6rem; color:var(--text-muted); white-space:nowrap; }
+.evo-legend { display:flex; gap:1rem; flex-wrap:wrap; margin-top:.75rem; }
+.evo-legend-item { display:flex; align-items:center; gap:.3rem; font-size:.78rem; color:var(--text-secondary); }
+.evo-legend-dot { width:10px; height:10px; border-radius:50%; }
+.evo-note { margin-top:.5rem; font-size:.78rem; color:var(--warning); font-weight:600; }
+
+/* Suspicious Operations */
+.fraud-susp-filters { display:flex; align-items:center; gap:.5rem; }
+.fraud-susp-count { font-size:.78rem; color:var(--text-muted); font-weight:600; }
+.btn-sm { font-size:.75rem !important; padding:.35rem .75rem !important; }
+.btn-active { background:var(--accent-primary) !important; color:white !important; border-color:var(--accent-primary) !important; }
+.suspicious-row { background:rgba(239,68,68,0.04); }
+.suspicious-row:hover { background:rgba(239,68,68,0.08); }
+.susp-reason { font-size:.78rem; color:var(--danger); font-weight:600; }
 

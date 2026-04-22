@@ -23,6 +23,7 @@ const login = async (req, res) => {
     const payload = {
       id: user.id,
       email: user.email,
+      name: user.name,
       role: user.role
     };
 
@@ -38,7 +39,7 @@ const login = async (req, res) => {
 const register = async (req, res) => {
   try {
     if (!req.body) return res.status(400).json({ message: 'Request body is required' });
-    const { email, password, role } = req.body;
+    const { email, password, role, name } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
@@ -54,6 +55,7 @@ const register = async (req, res) => {
     const newUser = await prisma.user.create({
       data: {
         email,
+        name: name || '',
         password: hashedPassword,
         role: role || 'CASHIER'
       }

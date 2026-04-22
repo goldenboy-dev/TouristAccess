@@ -8,49 +8,30 @@ const adapter = new PrismaBetterSqlite3({ url: 'file:' + dbPath });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const adminEmail = 'admin@tourist.com';
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const users = [
+    { email: 'admin@tourist.com',   name: 'Carlos Administrador', password: 'admin123',   role: 'ADMIN' },
+    { email: 'cajero@tourist.com',  name: 'María González',       password: 'cajero123',  role: 'CASHIER' },
+    { email: 'cajero2@tourist.com', name: 'Ana Rodríguez',        password: 'cajero123',  role: 'CASHIER' },
+    { email: 'guardia@tourist.com', name: 'Pedro Guardia',        password: 'guardia123', role: 'GUARD' },
+  ];
 
-  if (!existing) {
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        password: hashedPassword,
-        role: 'ADMIN'
+  for (const u of users) {
+    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    if (!existing) {
+      const hashedPassword = await bcrypt.hash(u.password, 10);
+      await prisma.user.create({
+        data: { email: u.email, name: u.name, password: hashedPassword, role: u.role }
+      });
+      console.log(`User created: ${u.email} (${u.name}) / ${u.password}`);
+    } else {
+      // Update name if missing
+      if (!existing.name) {
+        await prisma.user.update({ where: { id: existing.id }, data: { name: u.name } });
+        console.log(`Updated name for: ${u.email}`);
+      } else {
+        console.log(`User already exists: ${u.email}`);
       }
-    });
-    console.log('Admin user created: admin@tourist.com / admin123');
-  } else {
-    console.log('Admin user already exists.');
-  }
-
-  const cashierEmail = 'cajero@tourist.com';
-  const existingCashier = await prisma.user.findUnique({ where: { email: cashierEmail } });
-  if (!existingCashier) {
-    const hashedPassword = await bcrypt.hash('cajero123', 10);
-    await prisma.user.create({
-      data: {
-        email: cashierEmail,
-        password: hashedPassword,
-        role: 'CASHIER'
-      }
-    });
-    console.log('Cashier user created: cajero@tourist.com / cajero123');
-  }
-
-  const guardEmail = 'guardia@tourist.com';
-  const existingGuard = await prisma.user.findUnique({ where: { email: guardEmail } });
-  if (!existingGuard) {
-    const hashedPassword = await bcrypt.hash('guardia123', 10);
-    await prisma.user.create({
-      data: {
-        email: guardEmail,
-        password: hashedPassword,
-        role: 'GUARD'
-      }
-    });
-    console.log('Guard user created: guardia@tourist.com / guardia123');
+    }
   }
 }
 

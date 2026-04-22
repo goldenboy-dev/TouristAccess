@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { store } from '../store.js';
 import { getPaymentIcon, escapeHtml, getVisitorTypeName } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
+import { initFraudPanel, stopFraudRefresh } from './fraud-dashboard.js';
 
 export async function loadDashboard() {
   const from = document.getElementById('dash-date-from').value;
@@ -45,4 +46,9 @@ export async function loadDashboard() {
     if (store.currentUser?.role === 'GUARD') return;
     showToast(err.message, 'error');
   }
+
+  // Init fraud panel (only for ADMIN, handled internally)
+  initFraudPanel();
 }
+
+export { stopFraudRefresh };

@@ -4,7 +4,8 @@ import { domRefs } from './utils/dom.js';
 import { getAudio } from './utils/notifications.js';
 
 // Features
-import { loadDashboard } from './features/dashboard.js';
+import { loadDashboard, stopFraudRefresh } from './features/dashboard.js';
+import { onFraudDateChange, toggleSuspiciousFilter } from './features/fraud-dashboard.js';
 import {
   loadTickets, initCreateTicketPage, handleCreateTicketSubmit,
   updatePriceSummary, renderCedulaFields, toggleToken, copyToken,
@@ -23,6 +24,7 @@ export function navigateTo(pageId) {
   if (nav) nav.classList.add('active');
 
   if (pageId !== 'validate') stopScanner();
+  if (pageId !== 'dashboard') stopFraudRefresh();
 
   if (pageId === 'dashboard')     loadDashboard();
   if (pageId === 'tickets')       loadTickets();
@@ -107,6 +109,15 @@ function setupEventListeners() {
     document.getElementById('dash-date-to').value   = '';
     loadDashboard();
   });
+
+  // Fraud panel listeners
+  const fraudDatePicker = document.getElementById('fraud-date-picker');
+  if (fraudDatePicker) fraudDatePicker.addEventListener('change', onFraudDateChange);
+
+  const btnSuspAll = document.getElementById('btn-susp-all');
+  const btnSuspFlagged = document.getElementById('btn-susp-flagged');
+  if (btnSuspAll) btnSuspAll.addEventListener('click', () => toggleSuspiciousFilter(false));
+  if (btnSuspFlagged) btnSuspFlagged.addEventListener('click', () => toggleSuspiciousFilter(true));
 
   // Validate setup
   document.getElementById('validate-form').addEventListener('submit', handleManualValidate);

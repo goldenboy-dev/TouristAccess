@@ -155,6 +155,106 @@
             <tbody id="recent-entries-tbody"><tr><td colspan="5" class="table-empty">Sin entradas recientes</td></tr></tbody>
           </table>
         </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             PANEL ANTI-FRAUDE (ADMIN ONLY)
+             ═══════════════════════════════════════════════════ -->
+        <div id="fraud-panel" class="fraud-panel hidden">
+
+          <!-- Header + Date Picker -->
+          <div class="fraud-section-header">
+            <div>
+              <h3>🛡️ Panel Anti-Fraude</h3>
+              <p class="page-subtitle">Detección automática de anomalías</p>
+            </div>
+            <div class="fraud-date-control">
+              <label for="fraud-date-picker">Fecha:</label>
+              <input type="date" id="fraud-date-picker" class="select-input" style="width:170px">
+              <span id="fraud-auto-badge" class="fraud-auto-badge">⟳ Auto 60s</span>
+            </div>
+          </div>
+
+          <!-- A. Alerts -->
+          <div class="fraud-subsection">
+            <h4 class="fraud-subsection-title">Alertas Activas</h4>
+            <div id="fraud-alerts" class="fraud-alerts-grid"></div>
+          </div>
+
+          <!-- B. Risk Table -->
+          <div class="fraud-subsection">
+            <h4 class="fraud-subsection-title">Riesgo por Cajera</h4>
+            <div class="table-container glass-card">
+              <table class="data-table fraud-risk-table">
+                <thead>
+                  <tr>
+                    <th>Cajero</th>
+                    <th>Adultos</th>
+                    <th>Niños / Loc.</th>
+                    <th>% Gratis Hoy</th>
+                    <th>% Histórico</th>
+                    <th>Diferencia</th>
+                    <th>Cuadre</th>
+                    <th>Riesgo</th>
+                  </tr>
+                </thead>
+                <tbody id="fraud-risk-tbody">
+                  <tr><td colspan="8" class="table-empty">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- C. Cash Balance -->
+          <div class="fraud-subsection">
+            <h4 class="fraud-subsection-title">Cuadre de Caja</h4>
+            <div class="glass-card" style="padding:1.25rem">
+              <div id="fraud-cash-bars"></div>
+              <div id="fraud-cash-total" class="fraud-cash-total"></div>
+            </div>
+          </div>
+
+          <!-- D. Evolution Chart -->
+          <div class="fraud-subsection">
+            <h4 class="fraud-subsection-title">Evolución de Gratuitos por Hora</h4>
+            <div class="glass-card" style="padding:1.25rem">
+              <div id="fraud-evolution-body"></div>
+              <div id="fraud-evolution-legend" class="evo-legend"></div>
+              <div id="fraud-evolution-note" class="evo-note"></div>
+            </div>
+          </div>
+
+          <!-- E. Suspicious Operations -->
+          <div class="fraud-subsection">
+            <div class="fraud-subsection-header-row">
+              <h4 class="fraud-subsection-title">Operaciones Sospechosas</h4>
+              <div class="fraud-susp-filters">
+                <button class="btn-secondary btn-sm btn-active" id="btn-susp-all">Todas</button>
+                <button class="btn-secondary btn-sm" id="btn-susp-flagged">Solo sospechosas</button>
+                <span id="fraud-suspicious-count" class="fraud-susp-count"></span>
+              </div>
+            </div>
+            <div class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Cajero</th>
+                    <th>Adultos / Gratis</th>
+                    <th>Ingreso</th>
+                    <th>Código</th>
+                    <th>Razón</th>
+                  </tr>
+                </thead>
+                <tbody id="fraud-suspicious-tbody">
+                  <tr><td colspan="6" class="table-empty">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+        <!-- END FRAUD PANEL -->
+
       </section>
 
       <!-- ══ TICKETS PAGE ══════════════════════════════════ -->
