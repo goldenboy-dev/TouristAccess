@@ -10,6 +10,14 @@ export function getPaymentIcon(m) {
   return { CASH: '💵', TRANSFER: '🏦', QR: '📱', CARD: '💳' }[m] || ''; 
 }
 
+export function getVisitorTypeName(t) {
+  return { ADULT: 'Adulto', CHILD: 'Niño', LOCAL: 'Residente Local' }[t] || t;
+}
+
+export function getVisitorTypeClass(t) {
+  return { ADULT: 'badge-adult', CHILD: 'badge-child', LOCAL: 'badge-local' }[t] || '';
+}
+
 export function escapeHtml(str) { 
   if (!str) return '';
   const d = document.createElement('div'); 

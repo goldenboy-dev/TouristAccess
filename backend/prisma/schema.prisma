@@ -14,19 +14,36 @@ model User {
   createdAt DateTime @default(now())
 
   createdTickets Ticket[]
+  guardedTickets Ticket[]       @relation("TicketGuard")
   scans          Scan[]
+  groupSummaries GroupSummary[]
 }
 
 model Ticket {
-  id            Int      @id @default(autoincrement())
-  token         String   @unique
-  customer_name String
-  ticket_type   String
-  group_id      String?
-  price         Float
-  visit_date    DateTime
-  status        String   @default("ACTIVE")
-  payment_method String  @default("CASH")
+  id             Int      @id @default(autoincrement())
+  token          String   @unique
+  customer_name  String
+  visitor_type   String   // ADULT | CHILD | LOCAL
+  group_id       String?
+  price          Int
+  visit_date     DateTime
+  status         String   @default("ACTIVE")
+  payment_method String   @default("CASH")
+
+  // Cédula de identidad — obligatorio para LOCAL, opcional para CHILD
+  cedula         String?
+
+  // Guardia que validó la entrada
+  guard_id       Int?
+  guard          User?    @relation("TicketGuard", fields: [guard_id], references: [id])
+
+  // Confirmación del guardia para entradas gratuitas (CHILD/LOCAL)
+  free_confirmed    String?   // null | "CONFIRMED"
+  free_confirmed_at DateTime?
+
+  // Relación con GroupSummary
+  group_summary_id Int?
+  groupSummary     GroupSummary? @relation(fields: [group_summary_id], references: [id])
 
   createdById Int
   createdBy   User @relation(fields: [createdById], references: [id])
@@ -40,6 +57,26 @@ model Ticket {
   @@index([visit_date])
   @@index([status])
   @@index([group_id])
+  @@index([visitor_type])
+}
+
+model GroupSummary {
+  id              Int      @id @default(autoincrement())
+  operation_code  String   @unique
+  cajero_id       Int
+  cajero          User     @relation(fields: [cajero_id], references: [id])
+  total_adults    Int
+  total_children  Int
+  total_locals    Int
+  total_persons   Int
+  total_amount    Int
+  payment_method  String
+  visit_date      DateTime
+  createdAt       DateTime @default(now())
+
+  tickets         Ticket[]
+
+  @@index([operation_code])
 }
 
 model Scan {

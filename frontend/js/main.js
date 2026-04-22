@@ -5,7 +5,11 @@ import { getAudio } from './utils/notifications.js';
 
 // Features
 import { loadDashboard } from './features/dashboard.js';
-import { loadTickets, initCreateTicketPage, handleCreateTicketSubmit, updatePriceSummary, toggleToken, copyToken, handleCancelTicket } from './features/tickets.view.js';
+import {
+  loadTickets, initCreateTicketPage, handleCreateTicketSubmit,
+  updatePriceSummary, renderCedulaFields, toggleToken, copyToken,
+  handleCancelTicket, confirmAndCreate, hideConfirmationModal, handlePrint
+} from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
 import { loadUsers, handleRegister } from './features/users.js';
 
@@ -62,13 +66,26 @@ function setupEventListeners() {
     document.getElementById(id).addEventListener('change', loadTickets);
   });
 
-  // Ticket creation setup
-  document.getElementById('ticket-adults').addEventListener('input', updatePriceSummary);
-  document.getElementById('ticket-children').addEventListener('input', updatePriceSummary);
+  // Ticket creation setup — adults, children, locals
+  document.getElementById('ticket-adults').addEventListener('input', () => {
+    updatePriceSummary();
+  });
+  document.getElementById('ticket-children').addEventListener('input', () => {
+    renderCedulaFields();
+    updatePriceSummary();
+  });
+  document.getElementById('ticket-locals').addEventListener('input', () => {
+    renderCedulaFields();
+    updatePriceSummary();
+  });
   document.getElementById('create-ticket-form').addEventListener('submit', handleCreateTicketSubmit);
   
-  // Event Delegation for Tickets Table (Dynamic HTML)
-  document.getElementById('tickets-tbody').addEventListener('click', (e) => {
+  // Confirmation modal buttons
+  document.getElementById('confirm-modal-yes').addEventListener('click', confirmAndCreate);
+  document.getElementById('confirm-modal-no').addEventListener('click', hideConfirmationModal);
+
+  // Event Delegation for Tickets Table & Result Cards (Dynamic HTML)
+  document.addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
     
@@ -76,6 +93,11 @@ function setupEventListeners() {
     if (action === 'toggle-token') toggleToken(btn, btn.dataset.token);
     if (action === 'copy-token') copyToken(btn.dataset.token);
     if (action === 'cancel-ticket') handleCancelTicket(btn.dataset.id);
+
+    // Print buttons
+    if (btn.classList.contains('print-btn') && btn.dataset.print) {
+      handlePrint(btn.dataset.print);
+    }
   });
 
   // Dashboard filter

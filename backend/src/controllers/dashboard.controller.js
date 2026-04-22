@@ -48,7 +48,7 @@ const getStats = async (req, res) => {
       take: 15,
       orderBy: { scannedAt: 'desc' },
       include: {
-        ticket: { select: { customer_name: true, ticket_type: true, payment_method: true } },
+        ticket: { select: { customer_name: true, visitor_type: true, payment_method: true } },
         guard: { select: { email: true } }
       }
     });
@@ -57,7 +57,7 @@ const getStats = async (req, res) => {
       stats: { totalTickets, activeTickets, usedTickets, cancelledTickets, totalRevenue, usedTicketsToday, ticketsSoldToday, revenueToday, revenueByMethod },
       recentEntries: recentEntries.map(s => ({
         customerName: s.ticket.customer_name,
-        ticketType: s.ticket.ticket_type,
+        ticketType: s.ticket.visitor_type,
         paymentMethod: s.ticket.payment_method,
         guardEmail: s.guard.email,
         scannedAt: s.scannedAt

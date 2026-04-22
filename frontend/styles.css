@@ -1098,3 +1098,105 @@ body {
 .token-value { display:block; margin-top:.25rem; font-size:.68rem; color:var(--accent-primary); font-family:monospace; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
 .badge-payment { background:rgba(99,102,241,0.1); color:var(--accent-primary); border:1px solid rgba(99,102,241,0.25); padding:.25rem .6rem; border-radius:20px; font-size:.75rem; font-weight:600; white-space:nowrap; }
 .badge-info { background:var(--info-bg); color:var(--info); border:1px solid rgba(59,130,246,0.25); }
+
+/* ============================================
+   Badge Local & Visitor Type Overrides
+   ============================================ */
+.badge-local { background:rgba(124,58,237,0.12); color:#7c3aed; border:1px solid rgba(124,58,237,0.25); }
+.badge-adult { background:rgba(29,78,216,0.12); color:#1d4ed8; border:1px solid rgba(29,78,216,0.25); }
+.badge-child { background:rgba(6,95,70,0.12); color:#065f46; border:1px solid rgba(6,95,70,0.25); }
+
+/* ============================================
+   Price Summary Box (Create Ticket)
+   ============================================ */
+.price-summary-box { padding:1rem 1.25rem; background:rgba(42,157,78,0.06); border:1px solid rgba(42,157,78,0.2); border-radius:var(--radius-sm); margin-bottom:1.25rem; }
+.price-summary-header { display:flex; align-items:center; gap:.75rem; font-size:.95rem; color:var(--text-secondary); }
+.price-total-value { font-size:1.4rem; font-weight:800; color:var(--success); }
+.price-breakdown-detail { font-size:.82rem; color:var(--text-muted); margin-top:.5rem; line-height:1.6; }
+.price-persons { font-size:.78rem; color:var(--text-muted); margin-top:.25rem; font-weight:600; }
+
+/* ============================================
+   Cedula Fields
+   ============================================ */
+.cedula-section { margin-bottom:1.25rem; padding:1rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-sm); }
+.cedula-section-title { font-size:.85rem; font-weight:600; color:var(--text-secondary); margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
+.required-tag { font-size:.65rem; background:rgba(239,68,68,0.15); color:var(--danger); padding:.15rem .5rem; border-radius:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.optional-tag { font-size:.65rem; background:rgba(99,102,241,0.1); color:var(--info); padding:.15rem .5rem; border-radius:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.cedula-field { margin-bottom:.5rem !important; }
+.cedula-field input { width:100%; padding:.6rem .85rem; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit; font-size:.9rem; outline:none; transition:all var(--transition); }
+.cedula-field input:focus { border-color:var(--accent-primary); box-shadow:0 0 0 3px rgba(42,157,78,0.15); }
+.cedula-field label { font-size:.75rem !important; margin-bottom:.25rem !important; }
+
+/* ============================================
+   Confirmation Modal
+   ============================================ */
+.confirmation-modal { position:fixed; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); animation:fadeIn .15s ease-out; }
+.confirmation-modal-content { max-width:480px; width:90%; padding:2rem; animation:slideUp .25s ease-out; }
+.confirmation-modal-title { font-size:1.2rem; font-weight:700; margin-bottom:1.25rem; text-align:center; }
+.confirmation-modal-actions { display:flex; gap:.75rem; margin-top:1.5rem; justify-content:center; }
+.confirm-summary { text-align:center; }
+.confirm-total { font-size:2.5rem; font-weight:900; color:var(--success); margin-bottom:.5rem; }
+.confirm-detail { font-size:.85rem; color:var(--text-secondary); line-height:1.7; }
+.confirm-separator { height:1px; background:var(--border-color); margin:1rem 0; }
+.confirm-meta { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; text-align:left; font-size:.85rem; color:var(--text-secondary); }
+
+/* ============================================
+   Group Summary Document
+   ============================================ */
+.group-summary-doc { background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-lg); overflow:hidden; animation:slideUp .3s ease-out; }
+.summary-header-banner { text-align:center; padding:1rem; background:rgba(42,157,78,0.08); border-bottom:1px solid var(--border-color); }
+.summary-badge { font-size:1.1rem; font-weight:800; color:var(--accent-primary); letter-spacing:.03em; }
+.summary-total-section { text-align:center; padding:2rem 1.5rem; }
+.summary-total-big { font-size:3rem; font-weight:900; color:var(--success); line-height:1; }
+.summary-total-label { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.12em; margin-top:.5rem; font-weight:600; }
+.summary-breakdown { padding:1rem 1.5rem; border-top:2px dashed var(--border-color); border-bottom:2px dashed var(--border-color); }
+.breakdown-line { display:flex; justify-content:space-between; padding:.4rem 0; font-size:.9rem; }
+.breakdown-free { color:var(--text-muted); }
+.breakdown-amount { font-weight:700; }
+.breakdown-total-line { font-weight:700; padding-top:.6rem; border-top:1px solid var(--border-color); margin-top:.4rem; font-size:.9rem; }
+.summary-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; padding:1.25rem 1.5rem; }
+.summary-meta-item { display:flex; flex-direction:column; }
+.meta-label { font-size:.68rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+.meta-value { font-weight:700; font-size:.95rem; margin-top:.15rem; }
+.summary-alert { background:rgba(244,140,47,0.1); border-top:1px solid rgba(244,140,47,0.25); padding:.85rem 1.25rem; text-align:center; font-size:.85rem; font-weight:600; color:var(--warning); }
+.summary-actions { display:flex; flex-direction:column; align-items:center; margin-top:1.5rem; gap:.5rem; }
+
+/* ============================================
+   Individual Ticket Cards
+   ============================================ */
+.individual-tickets-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; margin-top:2rem; flex-wrap:wrap; gap:.5rem; }
+.individual-tickets-header h3 { font-size:1.15rem; font-weight:700; }
+.print-buttons { display:flex; gap:.5rem; }
+.individual-tickets-grid { display:flex; flex-direction:column; gap:1rem; }
+.ticket-card-header { display:flex; justify-content:space-between; align-items:center; padding:.6rem .85rem; border-radius:var(--radius-sm); margin-bottom:.75rem; font-weight:700; font-size:.85rem; }
+.ticket-card-header.badge-adult { background:rgba(29,78,216,0.1); border:1px solid rgba(29,78,216,0.2); }
+.ticket-card-header.badge-child { background:rgba(6,95,70,0.1); border:1px solid rgba(6,95,70,0.2); }
+.ticket-card-header.badge-local { background:rgba(124,58,237,0.1); border:1px solid rgba(124,58,237,0.2); }
+.ticket-card-type { text-transform:uppercase; letter-spacing:.04em; }
+.ticket-card-price { font-size:1rem; font-weight:800; }
+
+/* ============================================
+   Guard Free Entry Confirmation
+   ============================================ */
+.free-confirm-box { background:rgba(0,0,0,0.3); border-radius:var(--radius-md); padding:1.25rem; margin-top:1rem; text-align:center; }
+.free-confirm-type { font-size:1.3rem; font-weight:800; color:white; margin-bottom:.5rem; }
+.free-confirm-name { font-size:1.1rem; color:rgba(255,255,255,0.9); }
+.free-confirm-cedula { font-size:.9rem; color:rgba(255,255,255,0.8); margin-top:.5rem; }
+.free-confirm-buttons { display:flex; flex-direction:column; gap:.75rem; margin-top:1.5rem; align-items:center; }
+.btn-free-confirm { padding:1rem 2.5rem; font-size:1.1rem; font-weight:700; border:none; border-radius:50px; background:#16a34a; color:white; cursor:pointer; transition:transform .2s,box-shadow .2s; box-shadow:0 4px 15px rgba(22,163,74,0.4); }
+.btn-free-confirm:hover { transform:scale(1.05); }
+.btn-free-reject { padding:.8rem 2rem; font-size:.95rem; font-weight:600; border:2px solid rgba(255,255,255,0.3); border-radius:50px; background:transparent; color:white; cursor:pointer; transition:all .2s; }
+.btn-free-reject:hover { background:rgba(239,68,68,0.3); border-color:rgba(239,68,68,0.6); }
+
+/* ============================================
+   Print
+   ============================================ */
+.print-btn { font-size:.8rem !important; }
+@media print {
+  .sidebar,.page-header,.btn-primary,.btn-secondary,.print-btn,.summary-actions,.btn-free-confirm,.btn-free-reject,.btn-token-copy,#toast-container,.confirmation-modal { display:none !important; }
+  .main-content { margin-left:0; padding:.5rem; }
+  .page { display:block !important; }
+  .group-summary-doc { border:2px solid #333; }
+  .ticket-card { page-break-inside:avoid; border:1px solid #ccc; }
+}
+

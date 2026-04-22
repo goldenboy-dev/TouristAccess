@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
-import { getPaymentIcon, escapeHtml } from '../utils/formatters.js';
+import { getPaymentIcon, escapeHtml, getVisitorTypeName } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 
 export async function loadDashboard() {
@@ -34,7 +34,7 @@ export async function loadDashboard() {
         <tr>
           <td>${new Date(e.scannedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</td>
           <td>${escapeHtml(e.customerName)}</td>
-          <td>${e.ticketType === 'ADULT' ? 'Adulto' : 'Niño'}</td>
+          <td>${getVisitorTypeName(e.ticketType)}</td>
           <td>${getPaymentIcon(e.paymentMethod)} ${e.paymentMethod || '-'}</td>
           <td style="color:var(--text-muted)">${escapeHtml(e.guardEmail.split('@')[0])}</td>
         </tr>`).join('');

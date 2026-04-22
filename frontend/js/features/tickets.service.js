@@ -14,3 +14,7 @@ export async function createTicket(payload) {
     body: JSON.stringify(payload) 
   });
 }
+
+export async function fetchGroupByCode(operationCode) {
+  return await api(`/tickets/group/${operationCode}`);
+}

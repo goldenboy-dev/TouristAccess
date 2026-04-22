@@ -13,6 +13,9 @@ router.post('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketCo
 // Validate a ticket (Guard only) — rate limited to prevent brute force
 router.post('/validate', authenticateToken, authorizeRoles('GUARD'), rateLimit({ windowMs: 60000, maxRequests: 60 }), ticketController.validateTicket);
 
+// Get group by operation code (Admin & Cashier)
+router.get('/group/:operationCode', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getGroupByCode);
+
 // Get specific ticket details (Admin & Cashier)
 router.get('/:id', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getTicket);
 
