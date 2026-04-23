@@ -461,6 +461,22 @@
     </main>
   </div>
 
+  <!-- [FIX 10] Inline modal for editing user name (replaces native prompt()) -->
+  <div id="edit-name-modal" class="confirmation-modal hidden">
+    <div class="confirmation-modal-content glass-card">
+      <h3 class="confirmation-modal-title">✏️ Editar Nombre</h3>
+      <div class="form-group" style="margin:1rem 0">
+        <label for="edit-name-input">Nombre completo</label>
+        <input type="text" id="edit-name-input" placeholder="Ej: María González" required minlength="2">
+      </div>
+      <input type="hidden" id="edit-name-user-id">
+      <div class="confirmation-modal-actions">
+        <button class="btn-primary" id="edit-name-save" style="width:auto;padding:0.8rem 2rem;">Guardar</button>
+        <button class="btn-secondary" id="edit-name-cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script type="module" src="js/main.js"></script>

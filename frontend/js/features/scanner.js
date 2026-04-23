@@ -36,6 +36,8 @@ export async function processToken(token) {
     // ─── FREE ENTRY: needs guard confirmation ───
     if (data.status === 'confirmation_required') {
       overlay.classList.add('warning');
+      // [FIX 1] Mark overlay so the close handler knows to reset the scanner lock
+      overlay.dataset.pendingConfirmation = 'true';
       playSound('warning');
 
       const t = data.ticket;
@@ -104,6 +106,9 @@ export async function processToken(token) {
           content.innerHTML = `<div class="overlay-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:50px;height:50px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><h1>Error</h1><p>${err.message}</p>`;
         }
         closeBtn.style.display = '';
+        // [FIX 1] Reset lock after guard confirms — scan flow is complete
+        delete overlay.dataset.pendingConfirmation;
+        resetScannerLock();
       });
 
       document.getElementById('btn-confirm-free-no').addEventListener('click', () => {
@@ -115,6 +120,9 @@ export async function processToken(token) {
           <h1>Rechazado</h1><p>Entrada gratuita no confirmada por el guardia</p>
         `;
         closeBtn.style.display = '';
+        // [FIX 1] Reset lock after guard rejects — scan flow is complete
+        delete overlay.dataset.pendingConfirmation;
+        resetScannerLock();
       });
 
       return; // Don't call resetScannerLock yet

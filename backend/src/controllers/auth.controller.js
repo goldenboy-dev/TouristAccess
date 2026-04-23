@@ -45,6 +45,12 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    // [FIX 9] Whitelist valid roles — prevents arbitrary strings reaching Prisma (500 → 400)
+    const ALLOWED_ROLES = ['CASHIER', 'GUARD', 'ADMIN'];
+    if (role && !ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ message: 'Rol no válido. Valores permitidos: CASHIER, GUARD, ADMIN' });
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });

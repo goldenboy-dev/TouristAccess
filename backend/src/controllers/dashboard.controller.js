@@ -24,18 +24,26 @@ const getStats = async (req, res) => {
       prisma.ticket.count({ where: { status: 'USED', updatedAt: hasDateFilter ? dateFilter : { gte: today } } })
     ]);
 
-    // Revenue
-    const allPaidTickets = await prisma.ticket.findMany({
-      where: { status: { in: ['ACTIVE', 'USED'] } }, select: { price: true }
+    // [FIX 5] Revenue via aggregate — avoids loading thousands of rows into memory
+    const revenueAgg = await prisma.ticket.aggregate({
+      where: { status: { in: ['ACTIVE', 'USED'] } },
+      _sum: { price: true }
     });
-    const totalRevenue = allPaidTickets.reduce((s, t) => s + t.price, 0);
+    const totalRevenue = revenueAgg._sum.price || 0;
 
     const rangeFilter = hasDateFilter
       ? { createdAt: dateFilter, status: { in: ['ACTIVE', 'USED'] } }
       : { createdAt: { gte: today }, status: { in: ['ACTIVE', 'USED'] } };
 
+    // [FIX 5] Aggregate for range revenue too
+    const rangeSumAgg = await prisma.ticket.aggregate({
+      where: rangeFilter,
+      _sum: { price: true }
+    });
+    const revenueToday = rangeSumAgg._sum.price || 0;
+
+    // [FIX 5] revenueByMethod still needs per-row data, so findMany is kept here
     const todayPaidTickets = await prisma.ticket.findMany({ where: rangeFilter, select: { price: true, payment_method: true } });
-    const revenueToday = todayPaidTickets.reduce((s, t) => s + t.price, 0);
 
     // Revenue by payment method (for range or today)
     const revenueByMethod = { CASH: 0, TRANSFER: 0, QR: 0, CARD: 0 };

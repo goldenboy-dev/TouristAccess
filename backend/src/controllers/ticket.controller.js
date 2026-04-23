@@ -12,6 +12,17 @@ const VALID_PAYMENT = ['CASH', 'TRANSFER', 'QR', 'CARD'];
 const VALID_VISITOR_TYPES = ['ADULT', 'CHILD', 'LOCAL'];
 const TICKETS_DEMO_DIR = path.join(__dirname, '..', '..', 'tickets_demo');
 
+// [FIX 4] Sanitize strings before interpolating into HTML to prevent stored XSS
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ─── Printable ticket HTML generator ─────────────────────────
 function getVisitorLabel(type) {
   return { ADULT: 'Adulto', CHILD: 'Niño', LOCAL: 'Residente Local' }[type] || type;
@@ -66,7 +77,8 @@ async function generateTicketHTML(ticket, qrDataUrl, cashierEmail) {
   <div class="ticket-body">
     <div class="ticket-field">
       <span class="field-label">Cliente</span>
-      <span class="field-value">${ticket.customer_name}</span>
+      <!-- [FIX 4] Escaped to prevent XSS -->
+      <span class="field-value">${escapeHtml(ticket.customer_name)}</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Tipo</span>
@@ -78,7 +90,8 @@ async function generateTicketHTML(ticket, qrDataUrl, cashierEmail) {
     </div>${ticket.cedula ? `
     <div class="ticket-field">
       <span class="field-label">Cédula</span>
-      <span class="field-value">${ticket.cedula}</span>
+      <!-- [FIX 4] Escaped to prevent XSS -->
+      <span class="field-value">${escapeHtml(ticket.cedula)}</span>
     </div>` : ''}
     <div class="ticket-field">
       <span class="field-label">Fecha de Visita</span>
@@ -90,7 +103,8 @@ async function generateTicketHTML(ticket, qrDataUrl, cashierEmail) {
     </div>
     <div class="ticket-field">
       <span class="field-label">Cajero</span>
-      <span class="field-value">${cashierEmail}</span>
+      <!-- [FIX 4] Escaped to prevent XSS -->
+      <span class="field-value">${escapeHtml(cashierEmail)}</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Emisión</span>
@@ -153,6 +167,26 @@ const createTicket = async (req, res) => {
     }
     if (!VALID_PAYMENT.includes(payment_method)) {
       return res.status(400).json({ message: 'payment_method debe ser CASH, TRANSFER, QR o CARD' });
+    }
+
+    // [FIX 6] Validate customer_name: max 100 chars, no HTML tags
+    if (customer_name && customer_name.length > 100) {
+      return res.status(400).json({ message: 'El nombre del cliente no puede superar 100 caracteres' });
+    }
+    if (customer_name && /<[^>]*>/.test(customer_name)) {
+      return res.status(400).json({ message: 'El nombre del cliente no puede contener HTML' });
+    }
+
+    // [FIX 6] Validate visit_date format and range
+    const parsedVisitDate = new Date(visit_date);
+    if (isNaN(parsedVisitDate.getTime())) {
+      return res.status(400).json({ message: 'visit_date tiene un formato inválido' });
+    }
+    const todayForDateCheck = new Date(); todayForDateCheck.setHours(0, 0, 0, 0);
+    const diffMs = parsedVisitDate.getTime() - todayForDateCheck.getTime();
+    const diffDaysAbs = Math.abs(diffMs) / 86400000;
+    if (diffDaysAbs > 7) {
+      return res.status(400).json({ message: 'visit_date no puede ser más de 7 días en el pasado o futuro' });
     }
 
     // Validate cedulas for locals (OBLIGATORIO)
@@ -303,12 +337,11 @@ const validateTicket = async (req, res) => {
     if (!ticket) return res.json({ status: 'invalid', message: 'Ticket no encontrado' });
     if (ticket.status === 'CANCELLED') return res.json({ status: 'invalid', message: 'Este ticket fue cancelado' });
 
-    // Date validation
+    // [FIX 2] Exact day comparison — tickets are valid ONLY for today, not ±1 day
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const visitDate = new Date(ticket.visit_date); visitDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil(Math.abs(today - visitDate) / 86400000);
 
-    if (diffDays > 1) {
+    if (today.getTime() !== visitDate.getTime()) {
       return res.json({
         status: 'invalid',
         message: `Ticket no válido para hoy (fecha: ${visitDate.toLocaleDateString('es-ES')})`
@@ -352,29 +385,40 @@ const validateTicket = async (req, res) => {
       });
     }
 
-    // ── Mark as USED (optimistic concurrency) ──
+    // [FIX 3] Atomic transaction: prevents double-entry race condition when two guards
+    // scan the same QR simultaneously. Both could pass validations before either writes.
     const now = new Date();
-    const updated = await prisma.ticket.updateMany({
-      where: { id: ticket.id, status: 'ACTIVE' },
-      data: {
-        status: 'USED',
-        guard_id: parseInt(req.user.id),
-        free_confirmed: isFreeEntry ? 'CONFIRMED' : null,
-        free_confirmed_at: isFreeEntry ? now : null
-      }
-    });
+    try {
+      await prisma.$transaction(async (tx) => {
+        const updated = await tx.ticket.updateMany({
+          where: { id: ticket.id, status: 'ACTIVE' },
+          data: {
+            status: 'USED',
+            guard_id: parseInt(req.user.id),
+            free_confirmed: isFreeEntry ? 'CONFIRMED' : null,
+            free_confirmed_at: isFreeEntry ? now : null
+          }
+        });
 
-    if (updated.count === 0) {
-      return res.json({
-        status: 'already_used',
-        message: 'Este ticket acaba de ser validado por otro guardia'
+        if (updated.count === 0) {
+          // [FIX 3] Another guard already validated this ticket inside the transaction window
+          throw new Error('ALREADY_USED_RACE');
+        }
+
+        // Create scan record inside the same transaction
+        await tx.scan.create({
+          data: { ticketId: ticket.id, guardId: parseInt(req.user.id) }
+        });
       });
+    } catch (txError) {
+      if (txError.message === 'ALREADY_USED_RACE') {
+        return res.json({
+          status: 'already_used',
+          message: 'Este ticket acaba de ser validado por otro guardia'
+        });
+      }
+      throw txError; // re-throw unexpected errors to outer catch
     }
-
-    // Create scan record
-    await prisma.scan.create({
-      data: { ticketId: ticket.id, guardId: parseInt(req.user.id) }
-    });
 
     // Build response with group summary if available
     const response = {

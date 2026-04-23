@@ -12,7 +12,7 @@ import {
   handleCancelTicket, confirmAndCreate, hideConfirmationModal, handlePrint
 } from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
-import { loadUsers, handleRegister, handleEditName } from './features/users.js';
+import { loadUsers, handleRegister, handleEditName, saveEditName, cancelEditName } from './features/users.js';
 
 export function navigateTo(pageId) {
   domRefs.pages.forEach(p => p.classList.remove('active'));
@@ -123,7 +123,11 @@ function setupEventListeners() {
   // Validate setup
   document.getElementById('validate-form').addEventListener('submit', handleManualValidate);
   document.getElementById('validate-overlay-close').addEventListener('click', () => {
-    document.getElementById('validate-overlay').classList.add('hidden');
+    const overlay = document.getElementById('validate-overlay');
+    overlay.classList.add('hidden');
+    // [FIX 1] Clean up pending confirmation flag if guard closed overlay without deciding
+    delete overlay.dataset.pendingConfirmation;
+    document.getElementById('validate-overlay-close').style.display = '';
     document.getElementById('validate-token').value = '';
     document.getElementById('validate-token').focus();
     resetScannerLock();
@@ -139,6 +143,10 @@ function setupEventListeners() {
     document.getElementById('register-form').reset();
     document.getElementById('register-msg').classList.add('hidden');
   });
+
+  // [FIX 10] Edit-name modal buttons
+  document.getElementById('edit-name-save').addEventListener('click', saveEditName);
+  document.getElementById('edit-name-cancel').addEventListener('click', cancelEditName);
 }
 
 // ─── Init ────────────────────────────────────

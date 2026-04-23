@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ticket #72 - Tourist Access</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; background:#f5f5f5; display:flex; justify-content:center; padding:2rem; }
+  .ticket { background:white; width:400px; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+  .ticket-header { background:linear-gradient(135deg,#6366f1,#a855f7); color:white; padding:1.5rem; text-align:center; }
+  .ticket-header h1 { font-size:1.5rem; font-weight:800; letter-spacing:0.05em; }
+  .ticket-header p { opacity:0.85; font-size:0.875rem; margin-top:0.25rem; }
+  .ticket-body { padding:1.5rem; }
+  .ticket-field { display:flex; justify-content:space-between; padding:0.6rem 0; border-bottom:1px dashed #e5e7eb; }
+  .ticket-field:last-child { border-bottom:none; }
+  .ticket-field .field-label { color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
+  .ticket-field .field-value { font-weight:700; font-size:0.9rem; color:#1f2937; }
+  .qr-section { text-align:center; padding:1.5rem; background:#f9fafb; border-top:2px dashed #e5e7eb; }
+  .qr-section img { width:180px; height:180px; }
+  .qr-section p { margin-top:0.75rem; font-size:0.75rem; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+  .qr-section .token { font-size:0.6rem; color:#9ca3af; word-break:break-all; margin-top:0.5rem; font-family:monospace; }
+  .ticket-footer { text-align:center; padding:1rem; background:#f3f4f6; font-size:0.75rem; color:#9ca3af; }
+  .badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="ticket">
+  <div class="ticket-header">
+    <h1>🎫 Tourist Access</h1>
+    <p>Cerro Yaguarón — Ticket de Acceso</p>
+  </div>
+  <div class="ticket-body">
+    <div class="ticket-field">
+      <span class="field-label">Cliente</span>
+      <span class="field-value">VIS-20260423-02</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Tipo</span>
+      <span class="field-value"><span class="badge" style="background:#dbeafe;color:#1d4ed8">Adulto</span></span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Precio</span>
+      <span class="field-value">₲10.000</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Fecha de Visita</span>
+      <span class="field-value">22/04/2026</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Método de Pago</span>
+      <span class="field-value">QR</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Cajero</span>
+      <span class="field-value">cajero@tourist.com</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Emisión</span>
+      <span class="field-value">22/4/2026, 23:37:11</span>
+    </div>
+    <div class="ticket-field">
+      <span class="field-label">Estado</span>
+      <span class="field-value"><span class="badge" style="background:#d1fae5;color:#065f46">ACTIVO</span></span>
+    </div>
+  </div>
+  <div class="qr-section">
+    <img src="data:image/png;base64,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" alt="QR Code">
+    <p>Escanear al ingresar</p>
+    <div class="token">Token: 5ea5e65dfd717a01cd5d69ff639dfcb889abab41822247e17a9d3c8933114090</div>
+  </div>
+  <div class="ticket-footer">
+    Ticket #72 — Válido únicamente para la fecha indicada
+  </div>
+</div>
+</body>
+</html>

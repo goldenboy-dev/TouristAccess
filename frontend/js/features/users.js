@@ -56,22 +56,44 @@ export async function handleRegister(e) {
 }
 
 // ─── Inline name editing ────────────────────────────────────
-export async function handleEditName(userId, currentName) {
-  const newName = prompt('Nombre completo:', currentName || '');
-  if (newName === null) return; // cancelled
-  if (!newName.trim()) {
-    showToast('El nombre no puede estar vacío', 'error');
+// [FIX 10] Replaced native prompt() with inline modal — prompt() blocks the thread,
+// has no styling, and is disabled on some mobile browsers.
+export function handleEditName(userId, currentName) {
+  const modal = document.getElementById('edit-name-modal');
+  const input = document.getElementById('edit-name-input');
+  const hiddenId = document.getElementById('edit-name-user-id');
+
+  input.value = currentName || '';
+  hiddenId.value = userId;
+  modal.classList.remove('hidden');
+  input.focus();
+}
+
+// Called from main.js event listeners
+export async function saveEditName() {
+  const modal = document.getElementById('edit-name-modal');
+  const input = document.getElementById('edit-name-input');
+  const userId = document.getElementById('edit-name-user-id').value;
+  const newName = input.value.trim();
+
+  if (!newName || newName.length < 2) {
+    showToast('El nombre debe tener al menos 2 caracteres', 'error');
     return;
   }
 
   try {
     await api(`/dashboard/users/${userId}/name`, {
       method: 'PATCH',
-      body: JSON.stringify({ name: newName.trim() })
+      body: JSON.stringify({ name: newName })
     });
     showToast('Nombre actualizado', 'success');
+    modal.classList.add('hidden');
     loadUsers();
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+export function cancelEditName() {
+  document.getElementById('edit-name-modal').classList.add('hidden');
 }

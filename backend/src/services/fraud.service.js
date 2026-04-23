@@ -24,50 +24,51 @@ async function calculateCashierFraudMetrics(dateStr) {
     dayEnd   = new Date(); dayEnd.setHours(23, 59, 59, 999);
   }
 
-  // 1. Get all tickets for the date, grouped by cashier
-  const tickets = await prisma.ticket.findMany({
-    where: {
-      createdAt: { gte: dayStart, lte: dayEnd },
-      status: { in: ['ACTIVE', 'USED'] }
-    },
-    select: {
-      id: true, visitor_type: true, price: true, createdById: true, createdAt: true
-    }
-  });
-
-  // 2. Get all cashier users
-  const cashiers = await prisma.user.findMany({
-    where: { role: 'CASHIER' },
-    select: { id: true, email: true, name: true }
-  });
-
-  // 3. Get suspicious operations for the date
-  const groupSummaries = await prisma.groupSummary.findMany({
-    where: {
-      createdAt: { gte: dayStart, lte: dayEnd }
-    },
-    select: {
-      id: true, cajero_id: true, total_adults: true, total_children: true,
-      total_locals: true, total_persons: true, total_amount: true,
-      operation_code: true, createdAt: true
-    }
-  });
-
-  // 4. Historical data (last HISTORY_DAYS days, excluding current date)
+  // [FIX 7] All 4 queries are independent — parallelize with Promise.all
+  // dayStart, dayEnd, histStart, histEnd are all computed above, no inter-dependencies
   const histStart = new Date(dayStart);
   histStart.setDate(histStart.getDate() - HISTORY_DAYS);
   const histEnd = new Date(dayStart);
   histEnd.setMilliseconds(-1); // day before current
 
-  const historicalTickets = await prisma.ticket.findMany({
-    where: {
-      createdAt: { gte: histStart, lte: histEnd },
-      status: { in: ['ACTIVE', 'USED'] }
-    },
-    select: {
-      visitor_type: true, createdById: true, createdAt: true
-    }
-  });
+  const [tickets, cashiers, groupSummaries, historicalTickets] = await Promise.all([
+    // 1. All tickets for the date
+    prisma.ticket.findMany({
+      where: {
+        createdAt: { gte: dayStart, lte: dayEnd },
+        status: { in: ['ACTIVE', 'USED'] }
+      },
+      select: {
+        id: true, visitor_type: true, price: true, createdById: true, createdAt: true
+      }
+    }),
+    // 2. All cashier users
+    prisma.user.findMany({
+      where: { role: 'CASHIER' },
+      select: { id: true, email: true, name: true }
+    }),
+    // 3. Group summaries for the date
+    prisma.groupSummary.findMany({
+      where: {
+        createdAt: { gte: dayStart, lte: dayEnd }
+      },
+      select: {
+        id: true, cajero_id: true, total_adults: true, total_children: true,
+        total_locals: true, total_persons: true, total_amount: true,
+        operation_code: true, createdAt: true
+      }
+    }),
+    // 4. Historical data (last HISTORY_DAYS days, excluding current date)
+    prisma.ticket.findMany({
+      where: {
+        createdAt: { gte: histStart, lte: histEnd },
+        status: { in: ['ACTIVE', 'USED'] }
+      },
+      select: {
+        visitor_type: true, createdById: true, createdAt: true
+      }
+    })
+  ]);
 
   // 5. Calculate historical pct per cashier per day
   const histByCashierDay = {};

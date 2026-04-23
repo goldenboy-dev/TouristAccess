@@ -1,11 +1,13 @@
+// [FIX 8] Lazy getters — resolve on first access instead of module load time.
+// ES modules are deferred, but this is fragile. Getters guarantee DOM is ready.
 export const domRefs = {
-  loginScreen: document.getElementById('login-screen'),
-  appScreen: document.getElementById('app-screen'),
-  loginForm: document.getElementById('login-form'),
-  loginError: document.getElementById('login-error'),
-  logoutBtn: document.getElementById('logout-btn'),
-  navItems: document.querySelectorAll('.nav-item'),
-  pages: document.querySelectorAll('.page'),
+  get loginScreen() { return document.getElementById('login-screen'); },
+  get appScreen() { return document.getElementById('app-screen'); },
+  get loginForm() { return document.getElementById('login-form'); },
+  get loginError() { return document.getElementById('login-error'); },
+  get logoutBtn() { return document.getElementById('logout-btn'); },
+  get navItems() { return document.querySelectorAll('.nav-item'); },
+  get pages() { return document.querySelectorAll('.page'); },
 };
 
 export function getRoleName(r) { 
