@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
-const { calculateCashierFraudMetrics, deriveAlerts, ADULT_PRICE, FREE_PCT_LIMIT, HISTORY_DAYS } = require('../services/fraud.service');
+const { calculateCashierFraudMetrics, deriveAlerts, ADULT_PRICE, FREE_PCT_LIMIT } = require('../services/fraud.service');
+const { logger } = require('../utils/logger');
 
 // Helper: parse YYYY-MM-DD as local time (avoids UTC offset bug)
 function parseDateLocal(dateStr) {
@@ -16,32 +17,30 @@ function toLocalDateStr(d) {
 }
 
 // ─── GET /api/dashboard/fraud-summary ────────────────────────
-const getFraudSummary = async (req, res) => {
+const getFraudSummary = async (req, res, next) => {
   try {
     const { date } = req.query;
     const data = await calculateCashierFraudMetrics(date);
     res.status(200).json(data);
   } catch (error) {
-    console.error('Error in fraud-summary:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
 // ─── GET /api/dashboard/alerts ───────────────────────────────
-const getAlerts = async (req, res) => {
+const getAlerts = async (req, res, next) => {
   try {
     const { date, nivel } = req.query;
     const fraudData = await calculateCashierFraudMetrics(date);
     const alertsData = deriveAlerts(fraudData, nivel || null);
     res.status(200).json(alertsData);
   } catch (error) {
-    console.error('Error in alerts:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
 // ─── GET /api/dashboard/gratuitos-evolution ───────────────────
-const getGratuitosEvolution = async (req, res) => {
+const getGratuitosEvolution = async (req, res, next) => {
   try {
     const { date, interval_minutes = 60 } = req.query;
     const { start: dayStart, end: dayEnd } = parseDateLocal(date);
@@ -108,13 +107,12 @@ const getGratuitosEvolution = async (req, res) => {
       series
     });
   } catch (error) {
-    console.error('Error in gratuitos-evolution:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
 // ─── GET /api/dashboard/suspicious-operations ────────────────
-const getSuspiciousOperations = async (req, res) => {
+const getSuspiciousOperations = async (req, res, next) => {
   try {
     const { date, cajero_id } = req.query;
     const { start: dayStart, end: dayEnd } = parseDateLocal(date);
@@ -154,13 +152,12 @@ const getSuspiciousOperations = async (req, res) => {
       total_sospechosas: operations.filter(o => o.sospechoso).length
     });
   } catch (error) {
-    console.error('Error in suspicious-operations:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
 // ─── GET /api/dashboard/cashier-history ──────────────────────
-const getCashierHistory = async (req, res) => {
+const getCashierHistory = async (req, res, next) => {
   try {
     const { cajero_id, days = 30 } = req.query;
     if (!cajero_id) return res.status(400).json({ message: 'cajero_id is required' });
@@ -221,8 +218,7 @@ const getCashierHistory = async (req, res) => {
       history
     });
   } catch (error) {
-    console.error('Error in cashier-history:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 

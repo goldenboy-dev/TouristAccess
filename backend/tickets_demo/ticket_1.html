@@ -21,9 +21,6 @@
   .qr-section .token { font-size:0.6rem; color:#9ca3af; word-break:break-all; margin-top:0.5rem; font-family:monospace; }
   .ticket-footer { text-align:center; padding:1rem; background:#f3f4f6; font-size:0.75rem; color:#9ca3af; }
   .badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
-  .badge-adult { background:#dbeafe; color:#1d4ed8; }
-  .badge-child { background:#d1fae5; color:#065f46; }
-  .badge-active { background:#d1fae5; color:#065f46; }
 </style>
 </head>
 <body>
@@ -35,11 +32,12 @@
   <div class="ticket-body">
     <div class="ticket-field">
       <span class="field-label">Cliente</span>
-      <span class="field-value">Test Group</span>
+      <!-- [FIX 4] Escaped to prevent XSS -->
+      <span class="field-value">VIS-20260423-01</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Tipo</span>
-      <span class="field-value"><span class="badge badge-adult">Adulto</span></span>
+      <span class="field-value"><span class="badge" style="background:#dbeafe;color:#1d4ed8">Adulto</span></span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Precio</span>
@@ -47,29 +45,30 @@
     </div>
     <div class="ticket-field">
       <span class="field-label">Fecha de Visita</span>
-      <span class="field-value">19/04/2026</span>
+      <span class="field-value">22/04/2026</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Método de Pago</span>
-      <span class="field-value">TRANSFER</span>
+      <span class="field-value">CARD</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Cajero</span>
+      <!-- [FIX 4] Escaped to prevent XSS -->
       <span class="field-value">admin@tourist.com</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Emisión</span>
-      <span class="field-value">20/4/2026, 0:09:28</span>
+      <span class="field-value">23/4/2026, 14:22:08</span>
     </div>
     <div class="ticket-field">
       <span class="field-label">Estado</span>
-      <span class="field-value"><span class="badge badge-active">ACTIVO</span></span>
+      <span class="field-value"><span class="badge" style="background:#d1fae5;color:#065f46">ACTIVO</span></span>
     </div>
   </div>
   <div class="qr-section">
-    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAAAklEQVR4AewaftIAAAjySURBVO3BwXEjSRAEwcgy6K9y3krQeDSHQPHCPf0HSVpgkKQlBklaYpCkJQZJWmKQpCUGSVpikKQlBklaYpCkJQZJWmKQpCUGSVpikKQlBklaYpCkJQZJWuLFD0jCX9aWpyXhRls+KQnvtOVGEk7acpKET2rLO0n4y9pyY5CkJQZJWmKQpCUGSVpikKQlBklaYpCkJV78grZ8syR8WluelIQnteWdJNxoy5Pa8u3a8s2S8KRBkpYYJGmJQZKWGCRpiUGSlhgkaYlBkpZ48QWS8KS2PC0JJ235pLZ8WltuJOGTknDSlk9LwpPa8kmDJC0xSNISgyQtMUjSEoMkLTFI0hKDJC3xQr8iCSdt+aQk3GjLO0m40ZaTJJy05UZb9FmDJC0xSNISgyQtMUjSEoMkLTFI0hKDJC3xQl8hCSdtOUnCSVtutOUkCe+05ZOScNKWG0k4aYvuDJK0xCBJSwyStMQgSUsMkrTEIElLDJK0xIsv0Ja/ri1PasuTkvC0JJy05aQtn9SWT2vLXzZI0hKDJC0xSNISgyQtMUjSEoMkLTFI0hIvfkESdJaEk7acJOGkLTfacpKET0vCSVtOknDSlpMknLTlVhL+zwZJWmKQpCUGSVpikKQlBklaYpCkJQZJWiL9B11Lwo22nCThpC3bJeGT2qLvNkjSEoMkLTFI0hKDJC0xSNISgyQtMUjSEoMkLZH+w6UknLTlJAnfrC1PS8InteUkCZ/WlpMknLTl2yXhm7XlkwZJWmKQpCUGSVpikKQlBklaYpCkJQZJWuLFD2jLk9ry17XlJAk32nKShJO2fFoSTtpyIwnbteVGEm4k4aQtNwZJWmKQpCUGSVpikKQlBklaYpCkJQZJWuLFL0jCJyXhaW3ZrC0nSThpyztJuNGWG0k4acuNJNxqy0kSTpLwpCSctOVJgyQtMUjSEoMkLTFI0hKDJC0xSNISgyQtkf7Dckm40ZaTJDytLZsl4Z22PCkJJ225kYSTttxKwklbbiThSW150iBJSwyStMQgSUsMkrTEIElLDJK0xCBJS7z4BUn4pLacJOFWW06ScCMJN9pyIwknbbmVhJO2nLTlSW05ScJJW95py0kSbrTlRhI+aZCkJQZJWmKQpCUGSVpikKQlBklaYpCkJdJ/0LUk3GjLjSTcaMu3S8JJW06ScNKWkySctOUkCbfaciMJn9SWG4MkLTFI0hKDJC0xSNISgyQtMUjSEoMkLfHiByThpC0nSThpy40k3GjLrbZ8syQ8rS0nSfikJJy05UZbbiXhpC0nbdlskKQlBklaYpCkJQZJWmKQpCUGSVpikKQlXvyAtjwpCTfaciMJt5Jw0paTJJy05SQJN9rytLZsloSTtryThJO2PCkJJ235pEGSlhgkaYlBkpYYJGmJQZKWGCRpiUGSlnjxA5Jw0pYnteUkCTfa8k4STtrySW25kYSTtryThBttudGWkyR8WltuJOFGW77ZIElLDJK0xCBJSwyStMQgSUsMkrTEIElLDJK0RPoPl5LwzdpyIwmf1paTJDypLSdJeKctN5Jwoy03knDSlpMkPK0tN5Jw0paTJJy05cYgSUsMkrTEIElLDJK0xCBJSwyStMQgSUuk//BhSThpy40kPK0tJ0k4acuNJPx1bTlJwo22PCkJ77TlmyXhpC1PGiRpiUGSlhgkaYlBkpYYJGmJQZKWGCRpiRc/IAknbbmRhJO2nLTlRhLeScInteUkCd+uLSdJOGnLSRKelIRbSThpy5OS8M0GSVpikKQlBklaYpCkJQZJWmKQpCUGSVrixQ9oy0kSTtpykoSTJDypLe8k4UlJeFJbTpJwqy0nSThpyycl4UZbbiXhSW25kYSTttwYJGmJQZKWGCRpiUGSlhgkaYlBkpYYJGmJFz8gCSdtOUnCSVtuJOGkLSdJ2K4tJ0m40ZZbbbmRhE9qy0kSbrXlRhJOkvDNBklaYpCkJQZJWmKQpCUGSVpikKQlBkla4sUfkISTtpwk4aQt2yXhpC0nSThJwjtt+WZJOGnLjbbcSsJJW07acpKEk7Z80iBJSwyStMQgSUsMkrTEIElLDJK0xCBJS7z4Am15UhJO2nKShHfa8qS2nCThpC0nSThpy9OScKMtJ0m4kYQbbXknCTeS8JcNkrTEIElLDJK0xCBJSwyStMQgSUsMkrTEiy+QhCe15SQJJ215Jwmf1JYnJeGkLe8k4aQtN5Jw0pYnJeEkCZ/WlhtJuNGWG4MkLTFI0hKDJC0xSNISgyQtMUjSEoMkLfHiB7TlRls+qS1Pa8tJEm4k4UZbbiThnbacJOFGW06S8ElteVoSbiThmw2StMQgSUsMkrTEIElLDJK0xCBJSwyStMQgSUuk/3ApCX9ZWz4tCSdtOUnCt2vLk5Jw0paTJNxoyztJOGnLSRJutOWbDZK0xCBJSwyStMQgSUsMkrTEIElLDJK0xItf0JZvloRbSThpy0kSTtrypLacJOFWW06ScKMtT2rLSRJuteVJbTlJwklbTpJw0pYbgyQtMUjSEoMkLTFI0hKDJC0xSNISgyQt8eILJOFJbfl2bTlJwklbTtrypLbcasuNJJy05SQJJ225kYRPS8JJW2605UmDJC0xSNISgyQtMUjSEoMkLTFI0hKDJC3xQr8iCTfa8tcl4UlJuJGEp7XlJAk32nKShJO2nCThpC03BklaYpCkJQZJWmKQpCUGSVpikKQlBkla4oV+RVtOknAjCSdtudGWkyTcastJEk7acpKEk7bcSMJJW95JwklbntSWG2150iBJSwyStMQgSUsMkrTEIElLDJK0xCBJS7z4Am3Zri1PSsI3a8utJJy05SQJT0rCSVueloSTttxIwklbPmmQpCUGSVpikKQlBklaYpCkJQZJWmKQpCVe/IIk/HVJOGnLSVtOkvCkJPx1bbnRlpMk3GrLSRJOknCjLSdJOGnLkwZJWmKQpCUGSVpikKQlBklaYpCkJQZJWiL9B0laYJCkJQZJWmKQpCUGSVpikKQlBklaYpCkJQZJWmKQpCUGSVpikKQlBklaYpCkJQZJWmKQpCX+AwwoDleOBd+sAAAAAElFTkSuQmCC" alt="QR Code">
+    <img src="data:image/png;base64,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" alt="QR Code">
     <p>Escanear al ingresar</p>
-    <div class="token">Token: 01b38e622a9f725e023d6014f5ef2d29ef4b8df793ae1680018473e319d8126e</div>
+    <div class="token">Token: 93fd675472798cab4c2f340051c31044cb0fc2baa695816e85b9fc4eab78f982</div>
   </div>
   <div class="ticket-footer">
     Ticket #1 — Válido únicamente para la fecha indicada

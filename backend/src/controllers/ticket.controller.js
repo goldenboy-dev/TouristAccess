@@ -4,6 +4,7 @@ const { randomUUID } = require('crypto');
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const { logger } = require('../utils/logger');
 
 // ─── Server-side pricing (NEVER trust frontend) ──────────────
 const ADULT_PRICE = parseInt(process.env.ADULT_PRICE) || 10000;
@@ -135,9 +136,8 @@ async function generateTicketHTML(ticket, qrDataUrl, cashierEmail) {
 }
 
 // ─── CREATE (single or group) ────────────────────────────────
-const createTicket = async (req, res) => {
+const createTicket = async (req, res, next) => {
   try {
-    if (!req.body) return res.status(400).json({ message: 'Request body is required' });
 
     const {
       customer_name,
@@ -301,6 +301,19 @@ const createTicket = async (req, res) => {
       responseTickets.push({ ticket, qr: qrDataUrl, htmlFile });
     }
 
+    logger.info({
+      event: 'ticket.created',
+      userId: req.user.id,
+      role: req.user.role,
+      operationCode,
+      groupId,
+      adults: number_of_adults,
+      children: number_of_children,
+      locals: number_of_locals,
+      ip: req.ip,
+      requestId: req.requestId
+    });
+
     res.status(201).json({
       message: `${qty} ticket(s) creados exitosamente`,
       operation_code: operationCode,
@@ -311,20 +324,14 @@ const createTicket = async (req, res) => {
       tickets: responseTickets
     });
   } catch (error) {
-    console.error('Error creating ticket:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
 // ─── VALIDATE ────────────────────────────────────────────────
-const validateTicket = async (req, res) => {
+const validateTicket = async (req, res, next) => {
   try {
-    if (!req.body) return res.status(400).json({ message: 'Request body is required' });
-    const { token, free_confirmed } = req.body;
-
-    if (!token || typeof token !== 'string' || token.trim().length === 0) {
-      return res.status(400).json({ message: 'Token is required' });
-    }
+    const { token, free_confirmed } = req.body; // validated by Zod
 
     const cleanToken = token.trim();
     const ticket = await prisma.ticket.findUnique({
@@ -443,10 +450,19 @@ const validateTicket = async (req, res) => {
       };
     }
 
+    logger.info({
+      event: 'ticket.validated',
+      userId: req.user.id,
+      ticketId: ticket.id,
+      visitorType: ticket.visitor_type,
+      status: 'valid',
+      ip: req.ip,
+      requestId: req.requestId
+    });
+
     res.status(200).json(response);
   } catch (error) {
-    console.error('Error validating ticket:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
@@ -468,14 +484,15 @@ const getGroupByCode = async (req, res) => {
       }
     });
 
-    if (!summary) {
-      return res.status(404).json({ message: 'Grupo no encontrado' });
+    // [IDOR FIX] Cashier can only see their own groups
+    if (req.user.role === 'CASHIER' && summary.cajero_id !== req.user.id) {
+      logger.warn({ event: 'auth.access_denied.idor', userId: req.user.id, resource: 'GroupSummary', resourceId: operationCode, requestId: req.requestId });
+      return res.status(403).json({ message: 'No tienes permiso para ver este grupo' });
     }
 
     res.status(200).json({ summary });
   } catch (error) {
-    console.error('Error fetching group:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
@@ -491,10 +508,17 @@ const getTicket = async (req, res) => {
         groupSummary: true
       }
     });
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+    if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
+
+    // [IDOR FIX] Cashier can only see their own tickets
+    if (req.user.role === 'CASHIER' && ticket.createdById !== req.user.id) {
+      logger.warn({ event: 'auth.access_denied.idor', userId: req.user.id, resource: 'Ticket', resourceId: id, requestId: req.requestId });
+      return res.status(403).json({ message: 'No tienes permiso para ver este ticket' });
+    }
+
     res.status(200).json({ ticket });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
@@ -507,6 +531,11 @@ const listTickets = async (req, res) => {
     if (status && ['ACTIVE', 'USED', 'CANCELLED'].includes(status)) where.status = status;
     if (visitor_type && VALID_VISITOR_TYPES.includes(visitor_type)) where.visitor_type = visitor_type;
     if (payment_method && VALID_PAYMENT.includes(payment_method)) where.payment_method = payment_method;
+
+    // [IDOR FIX] Cashier can only list their own tickets
+    if (req.user.role === 'CASHIER') {
+      where.createdById = req.user.id;
+    }
 
     // Single date (legacy) or range
     if (date) {
@@ -533,8 +562,7 @@ const listTickets = async (req, res) => {
 
     res.status(200).json({ tickets, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (error) {
-    console.error('Error listing tickets:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
@@ -547,10 +575,10 @@ const cancelTicket = async (req, res) => {
     if (ticket.status === 'CANCELLED') return res.status(400).json({ message: 'Ticket is already cancelled' });
     if (ticket.status === 'USED') return res.status(400).json({ message: 'Cannot cancel a used ticket' });
 
-    const updated = await prisma.ticket.update({ where: { id: parseInt(id) }, data: { status: 'CANCELLED' } });
-    res.status(200).json({ message: 'Ticket cancelled', ticket: updated });
+    logger.warn({ event: 'ticket.cancelled', ticketId: id, adminId: req.user.id, ip: req.ip, requestId: req.requestId });
+    res.status(200).json({ message: 'Ticket cancelado', ticket: updated });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 

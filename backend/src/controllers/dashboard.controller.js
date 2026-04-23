@@ -1,8 +1,14 @@
 const prisma = require('../utils/prisma');
+const { logger } = require('../utils/logger');
 
-const getStats = async (req, res) => {
+// ─── DASHBOARD STATS ────────────────────────────────────────
+const getStats = async (req, res, next) => {
   try {
     const { date_from, date_to } = req.query;
+
+    // [IDOR FIX] Cashier should only see their own stats
+    const isCashier = req.user.role === 'CASHIER';
+    const baseWhere = isCashier ? { createdById: req.user.id } : {};
 
     // Build date range filter
     let dateFilter = {};
@@ -13,47 +19,49 @@ const getStats = async (req, res) => {
     const hasDateFilter = Object.keys(dateFilter).length > 0;
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const rangeStart = hasDateFilter ? (dateFilter.gte || null) : today;
-
+    
+    // Stats with IDOR filtering
     const [totalTickets, activeTickets, usedTickets, cancelledTickets, ticketsSoldToday, usedTicketsToday] = await Promise.all([
-      prisma.ticket.count(),
-      prisma.ticket.count({ where: { status: 'ACTIVE' } }),
-      prisma.ticket.count({ where: { status: 'USED' } }),
-      prisma.ticket.count({ where: { status: 'CANCELLED' } }),
-      prisma.ticket.count({ where: { createdAt: hasDateFilter ? dateFilter : { gte: today } } }),
-      prisma.ticket.count({ where: { status: 'USED', updatedAt: hasDateFilter ? dateFilter : { gte: today } } })
+      prisma.ticket.count({ where: baseWhere }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'ACTIVE' } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'USED' } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'CANCELLED' } }),
+      prisma.ticket.count({ where: { ...baseWhere, createdAt: hasDateFilter ? dateFilter : { gte: today } } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: 'USED', updatedAt: hasDateFilter ? dateFilter : { gte: today } } })
     ]);
 
-    // [FIX 5] Revenue via aggregate — avoids loading thousands of rows into memory
+    // Revenue via aggregate with IDOR filtering
     const revenueAgg = await prisma.ticket.aggregate({
-      where: { status: { in: ['ACTIVE', 'USED'] } },
+      where: { ...baseWhere, status: { in: ['ACTIVE', 'USED'] } },
       _sum: { price: true }
     });
     const totalRevenue = revenueAgg._sum.price || 0;
 
     const rangeFilter = hasDateFilter
-      ? { createdAt: dateFilter, status: { in: ['ACTIVE', 'USED'] } }
-      : { createdAt: { gte: today }, status: { in: ['ACTIVE', 'USED'] } };
+      ? { ...baseWhere, createdAt: dateFilter, status: { in: ['ACTIVE', 'USED'] } }
+      : { ...baseWhere, createdAt: { gte: today }, status: { in: ['ACTIVE', 'USED'] } };
 
-    // [FIX 5] Aggregate for range revenue too
     const rangeSumAgg = await prisma.ticket.aggregate({
       where: rangeFilter,
       _sum: { price: true }
     });
     const revenueToday = rangeSumAgg._sum.price || 0;
 
-    // [FIX 5] revenueByMethod still needs per-row data, so findMany is kept here
-    const todayPaidTickets = await prisma.ticket.findMany({ where: rangeFilter, select: { price: true, payment_method: true } });
+    const todayPaidTickets = await prisma.ticket.findMany({ 
+      where: rangeFilter, 
+      select: { price: true, payment_method: true } 
+    });
 
-    // Revenue by payment method (for range or today)
     const revenueByMethod = { CASH: 0, TRANSFER: 0, QR: 0, CARD: 0 };
     todayPaidTickets.forEach(t => {
       if (revenueByMethod[t.payment_method] !== undefined) revenueByMethod[t.payment_method] += t.price;
     });
 
-    // Recent entries
+    // Recent entries (IDOR filtering for scans)
+    const scanWhere = isCashier ? { ticket: { createdById: req.user.id } } : {};
     const recentEntries = await prisma.scan.findMany({
       take: 15,
+      where: scanWhere,
       orderBy: { scannedAt: 'desc' },
       include: {
         ticket: { select: { customer_name: true, visitor_type: true, payment_method: true } },
@@ -72,12 +80,12 @@ const getStats = async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
-const getUsers = async (req, res) => {
+// ─── LIST USERS (ADMIN only) ────────────────────────────────
+const getUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, createdAt: true, _count: { select: { createdTickets: true, scans: true } } },
@@ -85,11 +93,12 @@ const getUsers = async (req, res) => {
     });
     res.status(200).json({ users });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 };
 
-const updateUserName = async (req, res) => {
+// ─── UPDATE USER NAME (ADMIN only) ───────────────────────────
+const updateUserName = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -104,13 +113,11 @@ const updateUserName = async (req, res) => {
       select: { id: true, name: true, email: true }
     });
 
+    logger.info({ event: 'user.update_name', targetUserId: id, adminId: req.user.id, ip: req.ip, requestId: req.requestId });
+
     res.status(200).json({ message: 'Nombre actualizado correctamente', user: updatedUser });
   } catch (error) {
-    console.error('Error updating user name:', error);
-    if (error.code === 'P2025') {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-    res.status(500).json({ message: 'Error interno del servidor' });
+    next(error);
   }
 };
 

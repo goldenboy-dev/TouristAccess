@@ -1,17 +1,44 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const ticketController = require('../controllers/ticket.controller');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
-const { rateLimit } = require('../middlewares/rateLimit');
+const { validate } = require('../middlewares/validate');
+const { createTicketSchema, validateTicketSchema } = require('../validators/ticket.validator');
+const { logger } = require('../utils/logger');
 
-// List all tickets (Admin & Cashier)
+// ─── Rate limiters ──────────────────────────────────────────
+const createTicketLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn({ event: 'ratelimit.exceeded', ip: req.ip, path: '/tickets', requestId: req.requestId });
+    res.status(429).json({ error: 'Demasiadas solicitudes. Intentá de nuevo en un momento.' });
+  },
+});
+
+const validateTicketLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn({ event: 'ratelimit.exceeded', ip: req.ip, path: '/tickets/validate', requestId: req.requestId });
+    res.status(429).json({ error: 'Demasiadas validaciones. Intentá de nuevo en un momento.' });
+  },
+});
+
+// ─── Routes ─────────────────────────────────────────────────
+// List all tickets (Admin & Cashier — IDOR filtering applied in controller)
 router.get('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.listTickets);
 
 // Create a new ticket (Admin & Cashier)
-router.post('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.createTicket);
+router.post('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), createTicketLimiter, validate(createTicketSchema), ticketController.createTicket);
 
-// Validate a ticket (Guard only) — rate limited to prevent brute force
-router.post('/validate', authenticateToken, authorizeRoles('GUARD'), rateLimit({ windowMs: 60000, maxRequests: 60 }), ticketController.validateTicket);
+// Validate a ticket (Guard only)
+router.post('/validate', authenticateToken, authorizeRoles('GUARD'), validateTicketLimiter, validate(validateTicketSchema), ticketController.validateTicket);
 
 // Get group by operation code (Admin & Cashier)
 router.get('/group/:operationCode', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getGroupByCode);
