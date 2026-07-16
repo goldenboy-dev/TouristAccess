@@ -12,3 +12,8 @@ prisma/dev.db-journal
 *.db-journal
 
 /generated/prisma
+
+# Generated printable tickets. Only written when TICKETS_HTML_DIR is set
+# (see ticket-render.service.js) — build output, never source.
+tickets_demo/
+coverage/

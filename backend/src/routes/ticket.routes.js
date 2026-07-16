@@ -3,8 +3,8 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const ticketController = require('../controllers/ticket.controller');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
-const { validate } = require('../middlewares/validate');
-const { createTicketSchema, validateTicketSchema } = require('../validators/ticket.validator');
+const { validate, validateQuery } = require('../middlewares/validate');
+const { createTicketSchema, validateTicketSchema, listTicketsQuerySchema } = require('../validators/ticket.validator');
 const { logger } = require('../utils/logger');
 
 // ─── Rate limiters ──────────────────────────────────────────
@@ -32,7 +32,7 @@ const validateTicketLimiter = rateLimit({
 
 // ─── Routes ─────────────────────────────────────────────────
 // List all tickets (Admin & Cashier — IDOR filtering applied in controller)
-router.get('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.listTickets);
+router.get('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), validateQuery(listTicketsQuerySchema), ticketController.listTickets);
 
 // Create a new ticket (Admin & Cashier)
 router.post('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), createTicketLimiter, validate(createTicketSchema), ticketController.createTicket);

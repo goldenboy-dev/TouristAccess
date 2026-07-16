@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
-import { escapeHtml } from '../utils/formatters.js';
+import { escapeHtml, todayLocalStr } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 
 let fraudRefreshInterval = null;
@@ -21,8 +21,8 @@ export function initFraudPanel() {
   // Set date to today
   const picker = document.getElementById('fraud-date-picker');
   if (picker) {
-    picker.value = new Date().toISOString().slice(0, 10);
-    picker.max = new Date().toISOString().slice(0, 10);
+    picker.value = todayLocalStr();
+    picker.max = todayLocalStr();
   }
 
   loadFraudData();
@@ -34,7 +34,7 @@ function setupAutoRefresh() {
   if (fraudRefreshInterval) clearInterval(fraudRefreshInterval);
 
   const picker = document.getElementById('fraud-date-picker');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalStr();
 
   if (picker && picker.value === today) {
     fraudRefreshInterval = setInterval(() => loadFraudData(), 60000);
@@ -56,7 +56,7 @@ export function stopFraudRefresh() {
 // ─── Load all data ───────────────────────────────────────────
 async function loadFraudData() {
   const picker = document.getElementById('fraud-date-picker');
-  const date = picker ? picker.value : new Date().toISOString().slice(0, 10);
+  const date = picker?.value || todayLocalStr();
 
   try {
     const [summary, alerts, evolution, suspicious] = await Promise.all([

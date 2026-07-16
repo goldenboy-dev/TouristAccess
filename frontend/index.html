@@ -477,6 +477,20 @@
     </div>
   </div>
 
+  <!-- Cancel-ticket confirmation (replaces native confirm(), which cannot be
+       styled and is suppressed by some mobile browsers) -->
+  <div id="cancel-ticket-modal" class="confirmation-modal hidden">
+    <div class="confirmation-modal-content glass-card">
+      <h3 class="confirmation-modal-title">⚠️ Anular Ticket</h3>
+      <div id="cancel-ticket-modal-body" style="margin:1rem 0"></div>
+      <input type="hidden" id="cancel-ticket-id">
+      <div class="confirmation-modal-actions">
+        <button class="btn-danger" id="cancel-ticket-confirm" style="width:auto;padding:0.8rem 2rem;">Sí, anular</button>
+        <button class="btn-secondary" id="cancel-ticket-dismiss">Volver</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script type="module" src="js/main.js"></script>

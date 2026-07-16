@@ -1,5 +1,5 @@
 import { store } from '../store.js';
-import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass } from '../utils/formatters.js';
+import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
 import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing } from './tickets.service.js';
 
@@ -98,19 +98,47 @@ export async function copyToken(token) {
   }
 }
 
-export async function handleCancelTicket(id) {
-  if (!confirm('¿Cancelar este ticket?')) return;
+// ─── Cancel ticket ───────────────────────────────────────────
+// Native confirm() cannot be styled, blocks the thread, and is suppressed by
+// some mobile browsers — the same reasons the name editor moved to a modal.
+export function handleCancelTicket(id) {
+  const row = document.querySelector(`[data-action="cancel-ticket"][data-id="${id}"]`)?.closest('tr');
+  const customer = row?.children[1]?.textContent?.trim();
+
+  document.getElementById('cancel-ticket-id').value = id;
+  document.getElementById('cancel-ticket-modal-body').innerHTML = `
+    <p>Vas a anular el ticket <strong>#${escapeHtml(String(id))}</strong>${customer ? ` de <strong>${escapeHtml(customer)}</strong>` : ''}.</p>
+    <p style="margin-top:.5rem;color:var(--text-secondary);font-size:.85rem">
+      La anulación queda registrada en el log de auditoría y no se puede deshacer.
+    </p>`;
+  document.getElementById('cancel-ticket-modal').classList.remove('hidden');
+}
+
+export function hideCancelTicketModal() {
+  document.getElementById('cancel-ticket-modal').classList.add('hidden');
+}
+
+export async function confirmCancelTicket() {
+  const id = document.getElementById('cancel-ticket-id').value;
+  const btn = document.getElementById('cancel-ticket-confirm');
+  btn.disabled = true;
+
   try {
     await cancelTicketApi(id);
-    showToast('Ticket cancelado', 'success');
+    hideCancelTicketModal();
+    showToast('Ticket anulado', 'success');
     loadTickets();
-  } catch (err) { showToast(err.message, 'error'); }
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ──── CREATE TICKET ───────────────────────────────────────────
 
 export async function initCreateTicketPage() {
-  document.getElementById('ticket-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ticket-date').value = todayLocalStr();
   document.getElementById('ticket-result').classList.add('hidden');
   document.getElementById('ticket-adults').value = 1;
   document.getElementById('ticket-children').value = 0;

@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const bcrypt = require('bcryptjs');
 const { generateCompliantPassword, getPasswordErrors } = require('../src/utils/password');
 const prisma = require('../src/utils/prisma');

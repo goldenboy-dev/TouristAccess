@@ -274,6 +274,34 @@ body {
   border-color: rgba(255,255,255,0.15);
 }
 
+/* Full-size destructive action (modal confirmations). The -sm variant below
+   is the inline one used inside table rows. */
+.btn-danger {
+  padding: 0.6rem 1.2rem;
+  background: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all var(--transition);
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-danger-sm {
   padding: 0.35rem 0.75rem;
   background: var(--danger-bg);

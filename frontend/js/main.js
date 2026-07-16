@@ -9,7 +9,8 @@ import { onFraudDateChange, toggleSuspiciousFilter } from './features/fraud-dash
 import {
   loadTickets, initCreateTicketPage, handleCreateTicketSubmit,
   updatePriceSummary, renderCedulaFields, toggleToken, copyToken,
-  handleCancelTicket, confirmAndCreate, hideConfirmationModal, handlePrint
+  handleCancelTicket, confirmCancelTicket, hideCancelTicketModal,
+  confirmAndCreate, hideConfirmationModal, handlePrint
 } from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
 import { loadUsers, handleRegister, handleEditName, saveEditName, cancelEditName } from './features/users.js';
@@ -147,6 +148,10 @@ function setupEventListeners() {
   // [FIX 10] Edit-name modal buttons
   document.getElementById('edit-name-save').addEventListener('click', saveEditName);
   document.getElementById('edit-name-cancel').addEventListener('click', cancelEditName);
+
+  // Cancel-ticket modal buttons
+  document.getElementById('cancel-ticket-confirm').addEventListener('click', confirmCancelTicket);
+  document.getElementById('cancel-ticket-dismiss').addEventListener('click', hideCancelTicketModal);
 }
 
 // ─── Init ────────────────────────────────────

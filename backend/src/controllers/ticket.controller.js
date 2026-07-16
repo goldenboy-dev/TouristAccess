@@ -1,333 +1,48 @@
-const prisma = require('../utils/prisma');
-const { generateSecureToken } = require('../utils/crypto');
-const { randomUUID } = require('crypto');
-const QRCode = require('qrcode');
-const fs = require('fs');
-const path = require('path');
-const { logger } = require('../utils/logger');
+/**
+ * HTTP layer for tickets: reads the request, delegates to ticket.service,
+ * writes the audit entry (which needs request context: ip, user-agent,
+ * requestId) and shapes the response. No business rules live here.
+ */
+const ticketService = require('../services/ticket.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
+const { parseLocalDate } = require('../utils/date');
 
-// ─── Server-side pricing (NEVER trust frontend) ──────────────
-const ADULT_PRICE = parseInt(process.env.ADULT_PRICE) || 10000;
-const PRICING = { ADULT: ADULT_PRICE, CHILD: 0, LOCAL: 0 };
-const VALID_PAYMENT = ['CASH', 'TRANSFER', 'QR', 'CARD'];
-const VALID_VISITOR_TYPES = ['ADULT', 'CHILD', 'LOCAL'];
-const TICKETS_DEMO_DIR = path.join(__dirname, '..', '..', 'tickets_demo');
-
-// [FIX 4] Sanitize strings before interpolating into HTML to prevent stored XSS
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// ─── Printable ticket HTML generator ─────────────────────────
-function getVisitorLabel(type) {
-  return { ADULT: 'Adulto', CHILD: 'Niño', LOCAL: 'Residente Local' }[type] || type;
-}
-
-function getVisitorColor(type) {
-  return { ADULT: '#1d4ed8', CHILD: '#065f46', LOCAL: '#7c3aed' }[type] || '#6b7280';
-}
-
-function getVisitorBadgeBg(type) {
-  return { ADULT: '#dbeafe', CHILD: '#d1fae5', LOCAL: '#ede9fe' }[type] || '#f3f4f6';
-}
-
-async function generateTicketHTML(ticket, qrDataUrl, cashierEmail) {
-  const typeLabel = getVisitorLabel(ticket.visitor_type);
-  const visitDate = new Date(ticket.visit_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const createdAt = new Date(ticket.createdAt).toLocaleString('es-ES');
-  const badgeColor = getVisitorColor(ticket.visitor_type);
-  const badgeBg = getVisitorBadgeBg(ticket.visitor_type);
-
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<title>Ticket #${ticket.id} - Tourist Access</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; background:#f5f5f5; display:flex; justify-content:center; padding:2rem; }
-  .ticket { background:white; width:400px; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
-  .ticket-header { background:linear-gradient(135deg,#6366f1,#a855f7); color:white; padding:1.5rem; text-align:center; }
-  .ticket-header h1 { font-size:1.5rem; font-weight:800; letter-spacing:0.05em; }
-  .ticket-header p { opacity:0.85; font-size:0.875rem; margin-top:0.25rem; }
-  .ticket-body { padding:1.5rem; }
-  .ticket-field { display:flex; justify-content:space-between; padding:0.6rem 0; border-bottom:1px dashed #e5e7eb; }
-  .ticket-field:last-child { border-bottom:none; }
-  .ticket-field .field-label { color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600; }
-  .ticket-field .field-value { font-weight:700; font-size:0.9rem; color:#1f2937; }
-  .qr-section { text-align:center; padding:1.5rem; background:#f9fafb; border-top:2px dashed #e5e7eb; }
-  .qr-section img { width:180px; height:180px; }
-  .qr-section p { margin-top:0.75rem; font-size:0.75rem; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
-  .qr-section .token { font-size:0.6rem; color:#9ca3af; word-break:break-all; margin-top:0.5rem; font-family:monospace; }
-  .ticket-footer { text-align:center; padding:1rem; background:#f3f4f6; font-size:0.75rem; color:#9ca3af; }
-  .badge { display:inline-block; padding:0.2rem 0.6rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
-</style>
-</head>
-<body>
-<div class="ticket">
-  <div class="ticket-header">
-    <h1>🎫 Tourist Access</h1>
-    <p>Cerro Yaguarón — Ticket de Acceso</p>
-  </div>
-  <div class="ticket-body">
-    <div class="ticket-field">
-      <span class="field-label">Cliente</span>
-      <!-- [FIX 4] Escaped to prevent XSS -->
-      <span class="field-value">${escapeHtml(ticket.customer_name)}</span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Tipo</span>
-      <span class="field-value"><span class="badge" style="background:${badgeBg};color:${badgeColor}">${typeLabel}</span></span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Precio</span>
-      <span class="field-value">${ticket.price > 0 ? '₲' + ticket.price.toLocaleString('es-PY') : 'GRATIS'}</span>
-    </div>${ticket.cedula ? `
-    <div class="ticket-field">
-      <span class="field-label">Cédula</span>
-      <!-- [FIX 4] Escaped to prevent XSS -->
-      <span class="field-value">${escapeHtml(ticket.cedula)}</span>
-    </div>` : ''}
-    <div class="ticket-field">
-      <span class="field-label">Fecha de Visita</span>
-      <span class="field-value">${visitDate}</span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Método de Pago</span>
-      <span class="field-value">${ticket.payment_method}</span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Cajero</span>
-      <!-- [FIX 4] Escaped to prevent XSS -->
-      <span class="field-value">${escapeHtml(cashierEmail)}</span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Emisión</span>
-      <span class="field-value">${createdAt}</span>
-    </div>
-    <div class="ticket-field">
-      <span class="field-label">Estado</span>
-      <span class="field-value"><span class="badge" style="background:#d1fae5;color:#065f46">ACTIVO</span></span>
-    </div>
-  </div>
-  <div class="qr-section">
-    <img src="${qrDataUrl}" alt="QR Code">
-    <p>Escanear al ingresar</p>
-    <div class="token">Token: ${ticket.token}</div>
-  </div>
-  <div class="ticket-footer">
-    Ticket #${ticket.id} — Válido únicamente para la fecha indicada
-  </div>
-</div>
-</body>
-</html>`;
-
-  const filename = `ticket_${ticket.id}.html`;
-  const filepath = path.join(TICKETS_DEMO_DIR, filename);
-  if (!fs.existsSync(TICKETS_DEMO_DIR)) fs.mkdirSync(TICKETS_DEMO_DIR, { recursive: true });
-  fs.writeFileSync(filepath, html, 'utf8');
-  return filename;
-}
+const actorFrom = (req) => ({ id: req.user.id, role: req.user.role });
 
 // ─── CREATE (single or group) ────────────────────────────────
 const createTicket = async (req, res, next) => {
   try {
-
-    const {
-      customer_name,
-      visit_date,
-      payment_method,
-      number_of_adults = 0,
-      number_of_children = 0,
-      number_of_locals = 0,
-      children_cedulas = [],
-      locals_cedulas = []
-    } = req.body;
-
-    const adults   = parseInt(number_of_adults) || 0;
-    const children = parseInt(number_of_children) || 0;
-    const locals   = parseInt(number_of_locals) || 0;
-    const qty      = adults + children + locals;
-
-    // ── Validations ──
-    if (!visit_date || !payment_method) {
-      return res.status(400).json({ message: 'Campos requeridos: visit_date, payment_method' });
-    }
-    if (qty <= 0) {
-      return res.status(400).json({ message: 'El total de personas debe ser mayor a 0' });
-    }
-    if (qty > 50) {
-      return res.status(400).json({ message: 'El total de personas no puede superar 50' });
-    }
-    if (!VALID_PAYMENT.includes(payment_method)) {
-      return res.status(400).json({ message: 'payment_method debe ser CASH, TRANSFER, QR o CARD' });
-    }
-
-    // [FIX 6] Validate customer_name: max 100 chars, no HTML tags
-    if (customer_name && customer_name.length > 100) {
-      return res.status(400).json({ message: 'El nombre del cliente no puede superar 100 caracteres' });
-    }
-    if (customer_name && /<[^>]*>/.test(customer_name)) {
-      return res.status(400).json({ message: 'El nombre del cliente no puede contener HTML' });
-    }
-
-    // [FIX 6] Validate visit_date format and range
-    const parsedVisitDate = new Date(visit_date);
-    if (isNaN(parsedVisitDate.getTime())) {
-      return res.status(400).json({ message: 'visit_date tiene un formato inválido' });
-    }
-    const todayForDateCheck = new Date(); todayForDateCheck.setHours(0, 0, 0, 0);
-    const diffMs = parsedVisitDate.getTime() - todayForDateCheck.getTime();
-    const diffDaysAbs = Math.abs(diffMs) / 86400000;
-    if (diffDaysAbs > 7) {
-      return res.status(400).json({ message: 'visit_date no puede ser más de 7 días en el pasado o futuro' });
-    }
-
-    // Validate cedulas for locals (OBLIGATORIO)
-    const localsCedulaArr = Array.isArray(locals_cedulas) ? locals_cedulas : [];
-    if (locals > 0 && localsCedulaArr.length !== locals) {
-      return res.status(400).json({
-        message: `Se requieren ${locals} cédula(s) para residentes locales, se recibieron ${localsCedulaArr.length}`
-      });
-    }
-    for (let i = 0; i < localsCedulaArr.length; i++) {
-      if (!localsCedulaArr[i] || String(localsCedulaArr[i]).trim().length === 0) {
-        return res.status(400).json({ message: `La cédula del residente local #${i + 1} es obligatoria` });
-      }
-    }
-
-    // Children cedulas are optional
-    const childrenCedulaArr = Array.isArray(children_cedulas) ? children_cedulas : [];
-
-    // ── Fetch cashier ──
-    const cashier = await prisma.user.findUnique({
-      where: { id: parseInt(req.user.id) },
-      select: { email: true }
+    const result = await ticketService.createTicketGroup({
+      input: req.body,
+      cashierId: req.user.id,
     });
-
-    const groupId = randomUUID();
-    const operationCode = groupId.split('-')[0]; // short code e.g. "30b520a4"
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const totalAmount = adults * PRICING.ADULT;
-
-    // ── Prepare tickets data ──
-    const ticketsToCreate = [];
-    let ticketIndex = 1;
-
-    for (let i = 0; i < adults; i++) {
-      const name = customer_name
-        ? `${customer_name.trim()} #${ticketIndex}`
-        : `VIS-${dateStr}-${ticketIndex.toString().padStart(2, '0')}`;
-      ticketsToCreate.push({ type: 'ADULT', name, price: PRICING.ADULT, cedula: null });
-      ticketIndex++;
-    }
-    for (let i = 0; i < children; i++) {
-      const name = customer_name
-        ? `${customer_name.trim()} #${ticketIndex}`
-        : `VIS-${dateStr}-${ticketIndex.toString().padStart(2, '0')}`;
-      const cedula = childrenCedulaArr[i] ? String(childrenCedulaArr[i]).trim() || null : null;
-      ticketsToCreate.push({ type: 'CHILD', name, price: PRICING.CHILD, cedula });
-      ticketIndex++;
-    }
-    for (let i = 0; i < locals; i++) {
-      const name = customer_name
-        ? `${customer_name.trim()} #${ticketIndex}`
-        : `VIS-${dateStr}-${ticketIndex.toString().padStart(2, '0')}`;
-      ticketsToCreate.push({
-        type: 'LOCAL',
-        name,
-        price: PRICING.LOCAL,
-        cedula: String(localsCedulaArr[i]).trim()
-      });
-      ticketIndex++;
-    }
-
-    // ── Atomic transaction: GroupSummary + Tickets ──
-    const createdData = [];
-    let groupSummary;
-
-    await prisma.$transaction(async (tx) => {
-      // Create GroupSummary first
-      groupSummary = await tx.groupSummary.create({
-        data: {
-          operation_code: operationCode,
-          cajero_id: parseInt(req.user.id),
-          total_adults: adults,
-          total_children: children,
-          total_locals: locals,
-          total_persons: qty,
-          total_amount: totalAmount,
-          payment_method,
-          visit_date: new Date(visit_date)
-        }
-      });
-
-      // Create individual tickets
-      for (const t of ticketsToCreate) {
-        const token = generateSecureToken();
-        const ticket = await tx.ticket.create({
-          data: {
-            token,
-            customer_name: t.name,
-            visitor_type: t.type,
-            price: t.price,
-            cedula: t.cedula,
-            group_id: groupId,
-            group_summary_id: groupSummary.id,
-            visit_date: new Date(visit_date),
-            payment_method,
-            createdById: parseInt(req.user.id)
-          }
-        });
-        createdData.push(ticket);
-      }
-    });
-
-    // ── Generate QR codes ──
-    const responseTickets = [];
-
-    for (const ticket of createdData) {
-      const qrDataUrl = await QRCode.toDataURL(ticket.token, {
-        width: 300, margin: 2,
-        color: { dark: '#000000', light: '#ffffff' }
-      });
-      const htmlFile = await generateTicketHTML(ticket, qrDataUrl, cashier.email);
-      responseTickets.push({ ticket, qr: qrDataUrl, htmlFile });
-    }
 
     await auditFromRequest(req, {
       event: AUDIT_EVENTS.TICKET_CREATED,
       resource_type: 'GroupSummary',
-      resource_id: groupSummary.id,
+      resource_id: result.summary.id,
       metadata: {
-        operationCode,
-        groupId,
-        adults,
-        children,
-        locals,
-        totalPersons: qty,
-        totalAmount,
-        paymentMethod: payment_method,
-        visitDate: new Date(visit_date).toISOString(),
-        ticketIds: createdData.map((t) => t.id)
-      }
+        operationCode: result.operationCode,
+        groupId: result.groupId,
+        adults: result.counts.adults,
+        children: result.counts.children,
+        locals: result.counts.locals,
+        totalPersons: result.qty,
+        totalAmount: result.totalAmount,
+        paymentMethod: req.body.payment_method,
+        visitDate: parseLocalDate(req.body.visit_date).toISOString(),
+        ticketIds: result.ticketIds,
+      },
     });
 
     res.status(201).json({
-      message: `${qty} ticket(s) creados exitosamente`,
-      operation_code: operationCode,
-      group_id: groupId,
-      summary: groupSummary,
-      cashier_email: cashier.email,
-      total: totalAmount,
-      tickets: responseTickets
+      message: `${result.qty} ticket(s) creados exitosamente`,
+      operation_code: result.operationCode,
+      group_id: result.groupId,
+      summary: result.summary,
+      cashier_email: result.cashierEmail,
+      total: result.totalAmount,
+      tickets: result.tickets,
     });
   } catch (error) {
     next(error);
@@ -339,140 +54,25 @@ const validateTicket = async (req, res, next) => {
   try {
     const { token, free_confirmed } = req.body; // validated by Zod
 
-    const cleanToken = token.trim();
-    const ticket = await prisma.ticket.findUnique({
-      where: { token: cleanToken },
-      include: {
-        groupSummary: true
-      }
+    const result = await ticketService.validateTicketByToken({
+      token,
+      freeConfirmed: free_confirmed,
+      guardId: req.user.id,
     });
 
-    // Rejected scans are audited too: a guard racking up rejections is a
-    // signal, and disputes at the gate need a record of what was scanned.
-    const auditRejection = (reason, extra = {}) => auditFromRequest(req, {
-      event: AUDIT_EVENTS.TICKET_VALIDATION_REJECTED,
-      outcome: 'FAILURE',
-      resource_type: 'Ticket',
-      resource_id: ticket?.id ?? null,
-      metadata: { reason, ...extra }
-    });
-
-    if (!ticket) {
-      // Log a token prefix only — the full token is a bearer credential.
-      await auditRejection('token_not_found', { tokenPrefix: cleanToken.slice(0, 8) });
-      return res.json({ status: 'invalid', message: 'Ticket no encontrado' });
-    }
-    if (ticket.status === 'CANCELLED') {
-      await auditRejection('ticket_cancelled');
-      return res.json({ status: 'invalid', message: 'Este ticket fue cancelado' });
-    }
-
-    // [FIX 2] Exact day comparison — tickets are valid ONLY for today, not ±1 day
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const visitDate = new Date(ticket.visit_date); visitDate.setHours(0, 0, 0, 0);
-
-    if (today.getTime() !== visitDate.getTime()) {
-      await auditRejection('wrong_date', { visitDate: visitDate.toISOString() });
-      return res.json({
-        status: 'invalid',
-        message: `Ticket no válido para hoy (fecha: ${visitDate.toLocaleDateString('es-ES')})`
+    if (result.outcome === 'rejected') {
+      await auditFromRequest(req, {
+        event: AUDIT_EVENTS.TICKET_VALIDATION_REJECTED,
+        outcome: 'FAILURE',
+        resource_type: 'Ticket',
+        resource_id: result.ticket?.id ?? null,
+        metadata: result.audit,
       });
+      return res.json(result.response);
     }
 
-    if (ticket.status === 'USED') {
-      const lastScan = await prisma.scan.findFirst({
-        where: { ticketId: ticket.id },
-        orderBy: { scannedAt: 'desc' }
-      });
-      await auditRejection('already_used', { firstUsedAt: lastScan?.scannedAt?.toISOString() });
-      return res.json({
-        status: 'already_used',
-        message: 'Este ticket ya fue utilizado',
-        ticket: {
-          customer_name: ticket.customer_name,
-          visitor_type: ticket.visitor_type,
-          usedAt: lastScan?.scannedAt || ticket.updatedAt
-        }
-      });
-    }
-
-    // ── Free entry confirmation for CHILD / LOCAL ──
-    const isFreeEntry = ticket.visitor_type === 'CHILD' || ticket.visitor_type === 'LOCAL';
-    if (isFreeEntry && free_confirmed !== true) {
-      const typeLabel = ticket.visitor_type === 'CHILD'
-        ? 'menor de 12 años'
-        : 'residente local';
-      return res.json({
-        status: 'confirmation_required',
-        error: 'CONFIRMATION_REQUIRED',
-        message: `Confirmá que esta persona es ${typeLabel}`,
-        ticket: {
-          id: ticket.id,
-          customer_name: ticket.customer_name,
-          visitor_type: ticket.visitor_type,
-          cedula: ticket.cedula,
-          price: ticket.price,
-          group_id: ticket.group_id
-        }
-      });
-    }
-
-    // [FIX 3] Atomic transaction: prevents double-entry race condition when two guards
-    // scan the same QR simultaneously. Both could pass validations before either writes.
-    const now = new Date();
-    try {
-      await prisma.$transaction(async (tx) => {
-        const updated = await tx.ticket.updateMany({
-          where: { id: ticket.id, status: 'ACTIVE' },
-          data: {
-            status: 'USED',
-            guard_id: parseInt(req.user.id),
-            free_confirmed: isFreeEntry ? 'CONFIRMED' : null,
-            free_confirmed_at: isFreeEntry ? now : null
-          }
-        });
-
-        if (updated.count === 0) {
-          // [FIX 3] Another guard already validated this ticket inside the transaction window
-          throw new Error('ALREADY_USED_RACE');
-        }
-
-        // Create scan record inside the same transaction
-        await tx.scan.create({
-          data: { ticketId: ticket.id, guardId: parseInt(req.user.id) }
-        });
-      });
-    } catch (txError) {
-      if (txError.message === 'ALREADY_USED_RACE') {
-        return res.json({
-          status: 'already_used',
-          message: 'Este ticket acaba de ser validado por otro guardia'
-        });
-      }
-      throw txError; // re-throw unexpected errors to outer catch
-    }
-
-    // Build response with group summary if available
-    const response = {
-      status: 'valid',
-      message: 'Acceso permitido',
-      ticket: {
-        id: ticket.id,
-        customer_name: ticket.customer_name,
-        visitor_type: ticket.visitor_type,
-        price: ticket.price,
-        cedula: ticket.cedula,
-        group_id: ticket.group_id
-      }
-    };
-
-    if (ticket.groupSummary) {
-      response.groupSummary = {
-        total_adults: ticket.groupSummary.total_adults,
-        total_children: ticket.groupSummary.total_children,
-        total_locals: ticket.groupSummary.total_locals,
-        total_amount: ticket.groupSummary.total_amount
-      };
+    if (result.outcome === 'confirmation_required') {
+      return res.json(result.response);
     }
 
     // Free entries are the fraud-sensitive path: the audit row is what lets an
@@ -480,19 +80,19 @@ const validateTicket = async (req, res, next) => {
     await auditFromRequest(req, {
       event: AUDIT_EVENTS.TICKET_VALIDATED,
       resource_type: 'Ticket',
-      resource_id: ticket.id,
+      resource_id: result.ticket.id,
       metadata: {
-        visitorType: ticket.visitor_type,
-        price: ticket.price,
-        groupId: ticket.group_id,
-        freeEntry: isFreeEntry,
-        freeConfirmed: isFreeEntry ? true : undefined,
-        cedula: ticket.cedula || undefined,
-        scannedAt: now.toISOString()
-      }
+        visitorType: result.ticket.visitor_type,
+        price: result.ticket.price,
+        groupId: result.ticket.group_id,
+        freeEntry: result.isFreeEntry,
+        freeConfirmed: result.isFreeEntry ? true : undefined,
+        cedula: result.ticket.cedula || undefined,
+        scannedAt: result.scannedAt.toISOString(),
+      },
     });
 
-    res.status(200).json(response);
+    res.status(200).json(result.response);
   } catch (error) {
     next(error);
   }
@@ -501,29 +101,10 @@ const validateTicket = async (req, res, next) => {
 // ─── GET GROUP BY OPERATION CODE ─────────────────────────────
 const getGroupByCode = async (req, res, next) => {
   try {
-    const { operationCode } = req.params;
-
-    const summary = await prisma.groupSummary.findUnique({
-      where: { operation_code: operationCode },
-      include: {
-        cajero: { select: { id: true, email: true } },
-        tickets: {
-          include: {
-            createdBy: { select: { id: true, email: true } }
-          },
-          orderBy: { id: 'asc' }
-        }
-      }
+    const summary = await ticketService.getGroupByOperationCode({
+      operationCode: req.params.operationCode,
+      actor: actorFrom(req),
     });
-
-    if (!summary) return res.status(404).json({ message: 'Grupo no encontrado' });
-
-    // [IDOR FIX] Cashier can only see their own groups
-    if (req.user.role === 'CASHIER' && summary.cajero_id !== req.user.id) {
-      logger.warn({ event: 'auth.access_denied.idor', userId: req.user.id, resource: 'GroupSummary', resourceId: operationCode, requestId: req.requestId });
-      return res.status(403).json({ message: 'No tienes permiso para ver este grupo' });
-    }
-
     res.status(200).json({ summary });
   } catch (error) {
     next(error);
@@ -533,68 +114,18 @@ const getGroupByCode = async (req, res, next) => {
 // ─── GET ONE ─────────────────────────────────────────────────
 const getTicket = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        scans: { include: { guard: { select: { id: true, email: true } } } },
-        createdBy: { select: { id: true, email: true } },
-        groupSummary: true
-      }
-    });
-    if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
-
-    // [IDOR FIX] Cashier can only see their own tickets
-    if (req.user.role === 'CASHIER' && ticket.createdById !== req.user.id) {
-      logger.warn({ event: 'auth.access_denied.idor', userId: req.user.id, resource: 'Ticket', resourceId: id, requestId: req.requestId });
-      return res.status(403).json({ message: 'No tienes permiso para ver este ticket' });
-    }
-
+    const ticket = await ticketService.getTicketById({ id: req.params.id, actor: actorFrom(req) });
     res.status(200).json({ ticket });
   } catch (error) {
     next(error);
   }
 };
 
-// ─── LIST (enhanced filters) ─────────────────────────────────
+// ─── LIST ────────────────────────────────────────────────────
 const listTickets = async (req, res, next) => {
   try {
-    const { status, date, date_from, date_to, visitor_type, payment_method, page = 1, limit = 50 } = req.query;
-    const where = {};
-
-    if (status && ['ACTIVE', 'USED', 'CANCELLED'].includes(status)) where.status = status;
-    if (visitor_type && VALID_VISITOR_TYPES.includes(visitor_type)) where.visitor_type = visitor_type;
-    if (payment_method && VALID_PAYMENT.includes(payment_method)) where.payment_method = payment_method;
-
-    // [IDOR FIX] Cashier can only list their own tickets
-    if (req.user.role === 'CASHIER') {
-      where.createdById = req.user.id;
-    }
-
-    // Single date (legacy) or range
-    if (date) {
-      const s = new Date(date); s.setHours(0, 0, 0, 0);
-      const e = new Date(date); e.setHours(23, 59, 59, 999);
-      where.visit_date = { gte: s, lte: e };
-    } else if (date_from || date_to) {
-      where.visit_date = {};
-      if (date_from) { const s = new Date(date_from); s.setHours(0, 0, 0, 0); where.visit_date.gte = s; }
-      if (date_to)   { const e = new Date(date_to);   e.setHours(23, 59, 59, 999); where.visit_date.lte = e; }
-    }
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const [tickets, total] = await Promise.all([
-      prisma.ticket.findMany({
-        where,
-        include: { createdBy: { select: { id: true, email: true } } },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit)
-      }),
-      prisma.ticket.count({ where })
-    ]);
-
-    res.status(200).json({ tickets, total, page: parseInt(page), limit: parseInt(limit) });
+    const result = await ticketService.listTickets({ filters: req.query, actor: actorFrom(req) });
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -603,31 +134,22 @@ const listTickets = async (req, res, next) => {
 // ─── CANCEL ──────────────────────────────────────────────────
 const cancelTicket = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const ticket = await prisma.ticket.findUnique({ where: { id: parseInt(id) } });
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
-    if (ticket.status === 'CANCELLED') return res.status(400).json({ message: 'Ticket is already cancelled' });
-    if (ticket.status === 'USED') return res.status(400).json({ message: 'Cannot cancel a used ticket' });
-
-    const updated = await prisma.ticket.update({
-      where: { id: parseInt(id) },
-      data: { status: 'CANCELLED' }
-    });
+    const { previous, updated } = await ticketService.cancelTicketById({ id: req.params.id });
 
     await auditFromRequest(req, {
       event: AUDIT_EVENTS.TICKET_CANCELLED,
       resource_type: 'Ticket',
       resource_id: updated.id,
       metadata: {
-        previousStatus: ticket.status,
+        previousStatus: previous.status,
         newStatus: updated.status,
-        customerName: ticket.customer_name,
-        visitorType: ticket.visitor_type,
-        price: ticket.price,
-        groupId: ticket.group_id,
-        issuedBy: ticket.createdById,
-        visitDate: ticket.visit_date.toISOString()
-      }
+        customerName: previous.customer_name,
+        visitorType: previous.visitor_type,
+        price: previous.price,
+        groupId: previous.group_id,
+        issuedBy: previous.createdById,
+        visitDate: previous.visit_date.toISOString(),
+      },
     });
 
     res.status(200).json({ message: 'Ticket cancelado', ticket: updated });
@@ -636,10 +158,10 @@ const cancelTicket = async (req, res, next) => {
   }
 };
 
-// ─── PRICING (public within auth, so frontend never hardcodes prices) ──
+// ─── PRICING (so the frontend never hardcodes prices) ────────
 const getPricing = async (_req, res, next) => {
   try {
-    res.status(200).json({ ADULT_PRICE: PRICING.ADULT, CHILD_PRICE: PRICING.CHILD, LOCAL_PRICE: PRICING.LOCAL });
+    res.status(200).json(ticketService.getPricing());
   } catch (error) {
     next(error);
   }

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const prisma = require('../utils/prisma');
 const { logger } = require('../utils/logger');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
+const { badRequest, unauthorized, notFound, locked: lockedError } = require('../utils/errors');
 const {
   PASSWORD_CHANGE_SCOPE,
   MAX_FAILED_ATTEMPTS,
@@ -98,7 +99,7 @@ const login = async (req, res, next) => {
         outcome: 'FAILURE',
         metadata: { email, reason: 'user_not_found' },
       });
-      return res.status(401).json({ message: 'Credenciales inválidas' });
+      throw unauthorized('Credenciales inválidas');
     }
 
     // ── Lockout check (before verifying the password) ──
@@ -112,11 +113,10 @@ const login = async (req, res, next) => {
         actor_role: user.role,
         metadata: { reason: 'account_locked', minutesLeft },
       });
-      return res.status(423).json({
-        message: `Cuenta bloqueada por intentos fallidos. Reintentá en ${minutesLeft} minuto(s).`,
-        code: 'ACCOUNT_LOCKED',
-        retryAfterMinutes: minutesLeft,
-      });
+      throw lockedError(
+        `Cuenta bloqueada por intentos fallidos. Reintentá en ${minutesLeft} minuto(s).`,
+        { code: 'ACCOUNT_LOCKED', details: { retryAfterMinutes: minutesLeft } },
+      );
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -133,16 +133,14 @@ const login = async (req, res, next) => {
       });
 
       if (locked) {
-        return res.status(423).json({
-          message: `Cuenta bloqueada por ${LOCKOUT_MINUTES} minutos tras ${MAX_FAILED_ATTEMPTS} intentos fallidos.`,
-          code: 'ACCOUNT_LOCKED',
-          retryAfterMinutes: LOCKOUT_MINUTES,
-        });
+        throw lockedError(
+          `Cuenta bloqueada por ${LOCKOUT_MINUTES} minutos tras ${MAX_FAILED_ATTEMPTS} intentos fallidos.`,
+          { code: 'ACCOUNT_LOCKED', details: { retryAfterMinutes: LOCKOUT_MINUTES } },
+        );
       }
 
-      return res.status(401).json({
-        message: 'Credenciales inválidas',
-        attemptsLeft: Math.max(0, MAX_FAILED_ATTEMPTS - attempts),
+      throw unauthorized('Credenciales inválidas', {
+        details: { attemptsLeft: Math.max(0, MAX_FAILED_ATTEMPTS - attempts) },
       });
     }
 
@@ -205,9 +203,7 @@ const register = async (req, res, next) => {
     const { email, password, role, name } = req.body; // validated by Zod
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El usuario ya existe' });
-    }
+    if (existingUser) throw badRequest('El usuario ya existe');
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -247,7 +243,7 @@ const changePassword = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body; // validated by Zod
 
     const user = await prisma.user.findUnique({ where: { id: parseInt(req.user.id) } });
-    if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+    if (!user) throw notFound('Usuario no encontrado');
 
     const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
@@ -259,18 +255,18 @@ const changePassword = async (req, res, next) => {
         resource_id: user.id,
         metadata: { reason: 'wrong_current_password' },
       });
-      return res.status(401).json({ message: 'La contraseña actual es incorrecta' });
+      throw unauthorized('La contraseña actual es incorrecta');
     }
 
     // Policy check (also enforced by Zod; repeated here because this is the
     // last line of defence before a weak hash is persisted).
     const policyErrors = getPasswordErrors(newPassword);
     if (policyErrors.length > 0) {
-      return res.status(400).json({ message: 'La contraseña no cumple la política', errors: policyErrors });
+      throw badRequest('La contraseña no cumple la política', { details: { errors: policyErrors } });
     }
 
     if (await bcrypt.compare(newPassword, user.password)) {
-      return res.status(400).json({ message: 'La nueva contraseña debe ser distinta de la actual' });
+      throw badRequest('La nueva contraseña debe ser distinta de la actual');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -327,12 +323,12 @@ const refresh = async (req, res, next) => {
 
     if (!storedToken || storedToken.revoked) {
       logger.warn({ event: 'auth.refresh.invalid', ip: req.ip, reason: storedToken?.revoked ? 'revoked' : 'not_found', requestId: req.requestId });
-      return res.status(401).json({ message: 'Token de sesión inválido' });
+      throw unauthorized('Token de sesión inválido');
     }
 
     if (storedToken.expires_at < new Date()) {
       logger.warn({ event: 'auth.refresh.expired', userId: storedToken.user_id, ip: req.ip, requestId: req.requestId });
-      return res.status(401).json({ message: 'Sesión expirada. Iniciá sesión de nuevo.' });
+      throw unauthorized('Sesión expirada. Iniciá sesión de nuevo.');
     }
 
     // Security event: IP changed since original login
@@ -436,10 +432,10 @@ const revokeMySessions = async (req, res, next) => {
 const revokeAllTokens = async (req, res, next) => {
   try {
     const userId = parseInt(req.params.userId);
-    if (isNaN(userId)) return res.status(400).json({ message: 'userId inválido' });
+    if (isNaN(userId)) throw badRequest('userId inválido');
 
     const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
-    if (!target) return res.status(404).json({ message: 'Usuario no encontrado' });
+    if (!target) throw notFound('Usuario no encontrado');
 
     const { forcePasswordChange } = req.body || {};
 

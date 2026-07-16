@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 // ─── Fail fast if env is incomplete ─────────────────────────
 const { validateEnv } = require('./utils/env');

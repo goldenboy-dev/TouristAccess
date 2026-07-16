@@ -33,10 +33,12 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-tourist_access}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tourist_access}?schema=public
     ports:
       - "3000:3000"
-    volumes:
-      # Generated printable-ticket HTML (see ticket.controller.js) — survives
-      # container recreation instead of vanishing on every deploy.
-      - tickets_data:/app/tickets_demo
+    # The printable-ticket HTML is generated in memory (the QR and every field
+    # travel in the API response). Only uncomment this — together with
+    # TICKETS_HTML_DIR=/app/tickets_demo in backend/.env — if you need the
+    # files on disk for a print daemon or a demo.
+    # volumes:
+    #   - tickets_data:/app/tickets_demo
 
   frontend:
     image: nginx:alpine
@@ -50,4 +52,5 @@ services:
 
 volumes:
   postgres_data:
+  # Only used when the backend's tickets_data mount above is enabled.
   tickets_data:
