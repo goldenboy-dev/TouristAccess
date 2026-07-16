@@ -22,6 +22,7 @@ const dashboardLimiter = rateLimit({
 router.get('/stats', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), dashboardLimiter, dashboardController.getStats);
 router.get('/users', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, dashboardController.getUsers);
 router.patch('/users/:id/name', authenticateToken, authorizeRoles('ADMIN'), dashboardController.updateUserName);
+router.get('/audit-log', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, dashboardController.getAuditLog);
 
 // ── Anti-fraud panel routes (ADMIN only) ────────────────
 router.get('/fraud-summary',          authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, fraudController.getFraudSummary);

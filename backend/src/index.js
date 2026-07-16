@@ -9,6 +9,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { requestId } = require('./middlewares/requestId');
 const { errorHandler } = require('./middlewares/errorHandler');
+const { enforceHttps, forceHttps } = require('./middlewares/httpsRedirect');
 const { logger } = require('./utils/logger');
 
 const authRoutes = require('./routes/auth.routes');
@@ -17,6 +18,17 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── Trust proxy ────────────────────────────────────────────
+// Behind a TLS-terminating proxy, req.ip and req.secure are only correct if
+// Express is told how many proxy hops to trust. This drives rate limiting,
+// the audit trail and the HTTPS redirect, so it must be explicit — never
+// blanket-true, which would let anyone spoof X-Forwarded-For and evade the
+// login rate limiter.
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy) {
+  app.set('trust proxy', /^\d+$/.test(trustProxy) ? parseInt(trustProxy) : trustProxy);
+}
 
 // ─── Security headers (helmet) ──────────────────────────────
 app.use(helmet({
@@ -34,6 +46,15 @@ app.use(helmet({
   noSniff: true,
   referrerPolicy: { policy: 'no-referrer' },
 }));
+
+// ─── Request ID for traceability ────────────────────────────
+// Before the HTTPS guard so rejected plaintext requests are still traceable.
+app.use(requestId);
+
+// ─── Force HTTPS (production) ───────────────────────────────
+// Placed before CORS and body parsing: a plaintext request is rejected without
+// its payload ever being parsed.
+app.use(enforceHttps);
 
 // ─── CORS (restricted origins from .env) ────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
@@ -57,9 +78,6 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// ─── Request ID for traceability ────────────────────────────
-app.use(requestId);
-
 // ─── Routes ─────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
@@ -75,5 +93,19 @@ app.use(errorHandler);
 
 // ─── Start server ───────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info({ event: 'server.start', port: PORT, origins: allowedOrigins });
+  logger.info({
+    event: 'server.start',
+    port: PORT,
+    origins: allowedOrigins,
+    env: process.env.NODE_ENV || 'development',
+    forceHttps,
+    trustProxy: trustProxy || 'disabled',
+  });
+
+  if (forceHttps && !trustProxy) {
+    logger.warn({
+      event: 'server.config.warning',
+      message: 'FORCE_HTTPS activo sin TRUST_PROXY: detrás de un proxy, req.secure será false y todo se redirigirá en loop. Configurá TRUST_PROXY.',
+    });
+  }
 });

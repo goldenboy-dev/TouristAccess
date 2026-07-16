@@ -9,7 +9,9 @@ const validate = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);
 
   if (!result.success) {
-    const errors = result.error.errors.map(e => ({
+    // Zod 4 exposes `issues`; the old `errors` alias is gone, and reading it
+    // threw here — turning every 400 into a 500 with no field detail.
+    const errors = result.error.issues.map(e => ({
       field: e.path.join('.'),
       message: e.message,
     }));

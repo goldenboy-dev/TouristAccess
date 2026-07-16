@@ -14,11 +14,45 @@ model User {
   role      String   @default("CASHIER")
   createdAt DateTime @default(now())
 
+  // ── Password policy ──
+  password_changed_at  DateTime @default(now())
+  must_change_password Boolean  @default(false)
+
+  // ── Brute-force lockout ──
+  failed_login_attempts Int       @default(0)
+  locked_until          DateTime?
+
   createdTickets Ticket[]
   guardedTickets Ticket[]       @relation("TicketGuard")
   scans          Scan[]
   groupSummaries GroupSummary[]
   refreshTokens  RefreshToken[]
+  auditLogs      AuditLog[]
+}
+
+// Persisted audit trail for critical actions (emission, validation,
+// cancellation, auth events). Append-only: never updated or deleted by
+// the application.
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  event         String
+  actor_id      Int?
+  actor         User?    @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+  actor_email   String?
+  actor_role    String?
+  resource_type String?
+  resource_id   String?
+  outcome       String   @default("SUCCESS") // SUCCESS | FAILURE
+  ip_address    String?
+  user_agent    String?
+  request_id    String?
+  metadata      String? // JSON-encoded extra context
+  created_at    DateTime @default(now())
+
+  @@index([event])
+  @@index([actor_id])
+  @@index([created_at])
+  @@index([resource_type, resource_id])
 }
 
 model RefreshToken {

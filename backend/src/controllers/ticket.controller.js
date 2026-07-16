@@ -5,6 +5,7 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 const { logger } = require('../utils/logger');
+const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 
 // ─── Server-side pricing (NEVER trust frontend) ──────────────
 const ADULT_PRICE = parseInt(process.env.ADULT_PRICE) || 10000;
@@ -301,17 +302,22 @@ const createTicket = async (req, res, next) => {
       responseTickets.push({ ticket, qr: qrDataUrl, htmlFile });
     }
 
-    logger.info({
-      event: 'ticket.created',
-      userId: req.user.id,
-      role: req.user.role,
-      operationCode,
-      groupId,
-      adults: number_of_adults,
-      children: number_of_children,
-      locals: number_of_locals,
-      ip: req.ip,
-      requestId: req.requestId
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_CREATED,
+      resource_type: 'GroupSummary',
+      resource_id: groupSummary.id,
+      metadata: {
+        operationCode,
+        groupId,
+        adults,
+        children,
+        locals,
+        totalPersons: qty,
+        totalAmount,
+        paymentMethod: payment_method,
+        visitDate: new Date(visit_date).toISOString(),
+        ticketIds: createdData.map((t) => t.id)
+      }
     });
 
     res.status(201).json({
@@ -341,14 +347,32 @@ const validateTicket = async (req, res, next) => {
       }
     });
 
-    if (!ticket) return res.json({ status: 'invalid', message: 'Ticket no encontrado' });
-    if (ticket.status === 'CANCELLED') return res.json({ status: 'invalid', message: 'Este ticket fue cancelado' });
+    // Rejected scans are audited too: a guard racking up rejections is a
+    // signal, and disputes at the gate need a record of what was scanned.
+    const auditRejection = (reason, extra = {}) => auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_VALIDATION_REJECTED,
+      outcome: 'FAILURE',
+      resource_type: 'Ticket',
+      resource_id: ticket?.id ?? null,
+      metadata: { reason, ...extra }
+    });
+
+    if (!ticket) {
+      // Log a token prefix only — the full token is a bearer credential.
+      await auditRejection('token_not_found', { tokenPrefix: cleanToken.slice(0, 8) });
+      return res.json({ status: 'invalid', message: 'Ticket no encontrado' });
+    }
+    if (ticket.status === 'CANCELLED') {
+      await auditRejection('ticket_cancelled');
+      return res.json({ status: 'invalid', message: 'Este ticket fue cancelado' });
+    }
 
     // [FIX 2] Exact day comparison — tickets are valid ONLY for today, not ±1 day
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const visitDate = new Date(ticket.visit_date); visitDate.setHours(0, 0, 0, 0);
 
     if (today.getTime() !== visitDate.getTime()) {
+      await auditRejection('wrong_date', { visitDate: visitDate.toISOString() });
       return res.json({
         status: 'invalid',
         message: `Ticket no válido para hoy (fecha: ${visitDate.toLocaleDateString('es-ES')})`
@@ -360,6 +384,7 @@ const validateTicket = async (req, res, next) => {
         where: { ticketId: ticket.id },
         orderBy: { scannedAt: 'desc' }
       });
+      await auditRejection('already_used', { firstUsedAt: lastScan?.scannedAt?.toISOString() });
       return res.json({
         status: 'already_used',
         message: 'Este ticket ya fue utilizado',
@@ -450,14 +475,21 @@ const validateTicket = async (req, res, next) => {
       };
     }
 
-    logger.info({
-      event: 'ticket.validated',
-      userId: req.user.id,
-      ticketId: ticket.id,
-      visitorType: ticket.visitor_type,
-      status: 'valid',
-      ip: req.ip,
-      requestId: req.requestId
+    // Free entries are the fraud-sensitive path: the audit row is what lets an
+    // admin later prove which guard waved a CHILD/LOCAL through, and when.
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_VALIDATED,
+      resource_type: 'Ticket',
+      resource_id: ticket.id,
+      metadata: {
+        visitorType: ticket.visitor_type,
+        price: ticket.price,
+        groupId: ticket.group_id,
+        freeEntry: isFreeEntry,
+        freeConfirmed: isFreeEntry ? true : undefined,
+        cedula: ticket.cedula || undefined,
+        scannedAt: now.toISOString()
+      }
     });
 
     res.status(200).json(response);
@@ -582,7 +614,22 @@ const cancelTicket = async (req, res, next) => {
       data: { status: 'CANCELLED' }
     });
 
-    logger.warn({ event: 'ticket.cancelled', ticketId: id, adminId: req.user.id, ip: req.ip, requestId: req.requestId });
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_CANCELLED,
+      resource_type: 'Ticket',
+      resource_id: updated.id,
+      metadata: {
+        previousStatus: ticket.status,
+        newStatus: updated.status,
+        customerName: ticket.customer_name,
+        visitorType: ticket.visitor_type,
+        price: ticket.price,
+        groupId: ticket.group_id,
+        issuedBy: ticket.createdById,
+        visitDate: ticket.visit_date.toISOString()
+      }
+    });
+
     res.status(200).json({ message: 'Ticket cancelado', ticket: updated });
   } catch (error) {
     next(error);

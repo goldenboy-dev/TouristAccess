@@ -1,7 +1,17 @@
 const jwt = require('jsonwebtoken');
 const { logger } = require('../utils/logger');
+const { PASSWORD_CHANGE_SCOPE } = require('../utils/password');
 
-const authenticateToken = (req, res, next) => {
+/**
+ * Verifies the bearer token and populates req.user.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.allowPasswordChangeScope=false] - when false (the
+ *   default) a token scoped to the password-change flow is rejected. Only
+ *   /auth/change-password opts in, so an expired-password user cannot use their
+ *   restricted token to sell tickets or read the fraud panel.
+ */
+const verifyToken = ({ allowPasswordChangeScope = false } = {}) => (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -25,10 +35,29 @@ const authenticateToken = (req, res, next) => {
         code: isExpired ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID',
       });
     }
+
+    if (user.scope === PASSWORD_CHANGE_SCOPE && !allowPasswordChangeScope) {
+      logger.warn({
+        event: 'auth.token.scope_denied',
+        userId: user.id,
+        scope: user.scope,
+        path: req.path,
+        ip: req.ip,
+        requestId: req.requestId,
+      });
+      return res.status(403).json({
+        message: 'Debés cambiar tu contraseña antes de continuar',
+        code: 'PASSWORD_CHANGE_REQUIRED',
+      });
+    }
+
     req.user = user;
     next();
   });
 };
+
+const authenticateToken = verifyToken();
+const authenticatePasswordChange = verifyToken({ allowPasswordChangeScope: true });
 
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
@@ -49,4 +78,4 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-module.exports = { authenticateToken, authorizeRoles };
+module.exports = { authenticateToken, authenticatePasswordChange, authorizeRoles };

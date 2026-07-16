@@ -33,6 +33,40 @@ function validateEnv() {
     console.error('[FATAL] JWT_SECRET y JWT_REFRESH_SECRET deben ser distintos');
     process.exit(1);
   }
+
+  validateProductionSecurity();
+}
+
+/**
+ * Production-only guards. These are warnings-turned-fatal: shipping without
+ * HTTPS or with a wide-open CORS origin is the kind of thing that only gets
+ * noticed after an incident.
+ */
+function validateProductionSecurity() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const errors = [];
+
+  if (process.env.FORCE_HTTPS === 'false') {
+    errors.push('FORCE_HTTPS=false en producción: el tráfico viajaría en texto plano');
+  }
+
+  const origins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+
+  if (origins.includes('*')) {
+    errors.push('ALLOWED_ORIGINS no puede ser "*" en producción');
+  }
+
+  const insecureOrigins = origins.filter(o => o.startsWith('http://') && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(o));
+  if (insecureOrigins.length > 0) {
+    errors.push(`ALLOWED_ORIGINS contiene orígenes HTTP no seguros: ${insecureOrigins.join(', ')}`);
+  }
+
+  if (errors.length > 0) {
+    console.error('[FATAL] Configuración insegura para producción:');
+    errors.forEach(e => console.error(`  - ${e}`));
+    process.exit(1);
+  }
 }
 
 module.exports = { validateEnv };
