@@ -40,6 +40,9 @@ router.post('/', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), createTi
 // Validate a ticket (Guard only)
 router.post('/validate', authenticateToken, authorizeRoles('GUARD'), validateTicketLimiter, validate(validateTicketSchema), ticketController.validateTicket);
 
+// Pricing (Admin & Cashier — used by frontend to avoid hardcoding prices)
+router.get('/pricing', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getPricing);
+
 // Get group by operation code (Admin & Cashier)
 router.get('/group/:operationCode', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getGroupByCode);
 

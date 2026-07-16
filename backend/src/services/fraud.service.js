@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const { logger } = require('../utils/logger');
 
 // ─── Config from env ─────────────────────────────────────────
 const ADULT_PRICE       = parseInt(process.env.ADULT_PRICE) || 10000;
@@ -127,7 +128,7 @@ async function calculateCashierFraudMetrics(dateStr) {
 
     let brecha_ingresos = ingresos_esperados - ingresos_declarados;
     if (brecha_ingresos < 0) {
-      console.warn(`[FRAUD] Negative gap for cashier ${cashier.id}: ${brecha_ingresos}. Setting to 0.`);
+      logger.warn({ event: 'fraud.negative_gap', cashierId: cashier.id, gap: brecha_ingresos });
       brecha_ingresos = 0;
     }
 

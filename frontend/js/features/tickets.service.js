@@ -18,3 +18,7 @@ export async function createTicket(payload) {
 export async function fetchGroupByCode(operationCode) {
   return await api(`/tickets/group/${operationCode}`);
 }
+
+export async function fetchPricing() {
+  return await api('/tickets/pricing');
+}

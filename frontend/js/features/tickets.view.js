@@ -1,10 +1,21 @@
 import { store } from '../store.js';
 import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
-import { fetchTickets, cancelTicket as cancelTicketApi, createTicket } from './tickets.service.js';
+import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing } from './tickets.service.js';
 
-// ─── PRICING (mirrors backend) ────────────────────────────────
-const ADULT_PRICE = 10000;
+// ─── PRICING ────────────────────────────────────────────────
+// [FIX 6] No longer hardcoded — fetched from backend so it never drifts
+// from the server-side price (which is the one actually charged).
+let ADULT_PRICE = 10000; // fallback until loadPricing() resolves
+
+async function loadPricing() {
+  try {
+    const data = await fetchPricing();
+    if (data.ADULT_PRICE) ADULT_PRICE = data.ADULT_PRICE;
+  } catch (err) {
+    console.warn('No se pudo obtener el precio desde el backend, usando valor por defecto', err);
+  }
+}
 
 // ──── LIST TICKETS ────────────────────────────────────────────
 export async function loadTickets() {
@@ -98,13 +109,14 @@ export async function handleCancelTicket(id) {
 
 // ──── CREATE TICKET ───────────────────────────────────────────
 
-export function initCreateTicketPage() {
+export async function initCreateTicketPage() {
   document.getElementById('ticket-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('ticket-result').classList.add('hidden');
   document.getElementById('ticket-adults').value = 1;
   document.getElementById('ticket-children').value = 0;
   document.getElementById('ticket-locals').value = 0;
   renderCedulaFields();
+  await loadPricing();
   updatePriceSummary();
 }
 

@@ -467,7 +467,7 @@ const validateTicket = async (req, res, next) => {
 };
 
 // ─── GET GROUP BY OPERATION CODE ─────────────────────────────
-const getGroupByCode = async (req, res) => {
+const getGroupByCode = async (req, res, next) => {
   try {
     const { operationCode } = req.params;
 
@@ -484,6 +484,8 @@ const getGroupByCode = async (req, res) => {
       }
     });
 
+    if (!summary) return res.status(404).json({ message: 'Grupo no encontrado' });
+
     // [IDOR FIX] Cashier can only see their own groups
     if (req.user.role === 'CASHIER' && summary.cajero_id !== req.user.id) {
       logger.warn({ event: 'auth.access_denied.idor', userId: req.user.id, resource: 'GroupSummary', resourceId: operationCode, requestId: req.requestId });
@@ -497,7 +499,7 @@ const getGroupByCode = async (req, res) => {
 };
 
 // ─── GET ONE ─────────────────────────────────────────────────
-const getTicket = async (req, res) => {
+const getTicket = async (req, res, next) => {
   try {
     const { id } = req.params;
     const ticket = await prisma.ticket.findUnique({
@@ -523,7 +525,7 @@ const getTicket = async (req, res) => {
 };
 
 // ─── LIST (enhanced filters) ─────────────────────────────────
-const listTickets = async (req, res) => {
+const listTickets = async (req, res, next) => {
   try {
     const { status, date, date_from, date_to, visitor_type, payment_method, page = 1, limit = 50 } = req.query;
     const where = {};
@@ -567,13 +569,18 @@ const listTickets = async (req, res) => {
 };
 
 // ─── CANCEL ──────────────────────────────────────────────────
-const cancelTicket = async (req, res) => {
+const cancelTicket = async (req, res, next) => {
   try {
     const { id } = req.params;
     const ticket = await prisma.ticket.findUnique({ where: { id: parseInt(id) } });
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
     if (ticket.status === 'CANCELLED') return res.status(400).json({ message: 'Ticket is already cancelled' });
     if (ticket.status === 'USED') return res.status(400).json({ message: 'Cannot cancel a used ticket' });
+
+    const updated = await prisma.ticket.update({
+      where: { id: parseInt(id) },
+      data: { status: 'CANCELLED' }
+    });
 
     logger.warn({ event: 'ticket.cancelled', ticketId: id, adminId: req.user.id, ip: req.ip, requestId: req.requestId });
     res.status(200).json({ message: 'Ticket cancelado', ticket: updated });
@@ -582,4 +589,13 @@ const cancelTicket = async (req, res) => {
   }
 };
 
-module.exports = { createTicket, validateTicket, getTicket, listTickets, cancelTicket, getGroupByCode };
+// ─── PRICING (public within auth, so frontend never hardcodes prices) ──
+const getPricing = async (_req, res, next) => {
+  try {
+    res.status(200).json({ ADULT_PRICE: PRICING.ADULT, CHILD_PRICE: PRICING.CHILD, LOCAL_PRICE: PRICING.LOCAL });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createTicket, validateTicket, getTicket, listTickets, cancelTicket, getGroupByCode, getPricing };
