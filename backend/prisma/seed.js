@@ -1,13 +1,7 @@
 require('dotenv').config();
-const { PrismaClient } = require('@prisma/client');
-const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');
 const bcrypt = require('bcryptjs');
-const path = require('path');
 const { generateCompliantPassword, getPasswordErrors } = require('../src/utils/password');
-
-const dbPath = path.join(__dirname, 'dev.db');
-const adapter = new PrismaBetterSqlite3({ url: 'file:' + dbPath });
-const prisma = new PrismaClient({ adapter });
+const prisma = require('../src/utils/prisma');
 
 const isProduction = process.env.NODE_ENV === 'production';
 

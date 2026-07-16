@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tourist_access}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tourist_access}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Exposed for local psql/GUI access during development. Comment out (or
+    # bind to 127.0.0.1) for a production deploy — the backend reaches this
+    # service over the internal compose network regardless.
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tourist_access} -d ${POSTGRES_DB:-tourist_access}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      # Overrides whatever DATABASE_URL is in backend/.env: inside the compose
+      # network Postgres is reachable at the service name, not localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tourist_access}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-tourist_access}?schema=public
+    ports:
+      - "3000:3000"
+    volumes:
+      # Generated printable-ticket HTML (see ticket.controller.js) — survives
+      # container recreation instead of vanishing on every deploy.
+      - tickets_data:/app/tickets_demo
+
+  frontend:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  tickets_data:

@@ -1,0 +1,5 @@
+# Force LF regardless of platform/core.autocrlf — CRLF breaks the shebang
+# (#!/bin/sh) when these get COPYed into a Linux container.
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf

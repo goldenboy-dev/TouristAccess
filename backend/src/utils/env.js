@@ -34,6 +34,11 @@ function validateEnv() {
     process.exit(1);
   }
 
+  if (!/^postgres(ql)?:\/\//.test(process.env.DATABASE_URL)) {
+    console.error('[FATAL] DATABASE_URL debe ser una conexión PostgreSQL (postgresql://...)');
+    process.exit(1);
+  }
+
   validateProductionSecurity();
 }
 
@@ -53,13 +58,29 @@ function validateProductionSecurity() {
 
   const origins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
 
+  if (origins.length === 0) {
+    errors.push('ALLOWED_ORIGINS no puede estar vacío en producción');
+  }
+
   if (origins.includes('*')) {
     errors.push('ALLOWED_ORIGINS no puede ser "*" en producción');
+  }
+
+  // localhost/127.0.0.1 is a dev convenience exempted from the HTTP check
+  // below — but a real deployment pointing CORS at localhost is always a
+  // misconfiguration (leftover dev value), never intentional.
+  const localOrigins = origins.filter(o => /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(o));
+  if (localOrigins.length > 0) {
+    errors.push(`ALLOWED_ORIGINS contiene orígenes locales en producción: ${localOrigins.join(', ')}`);
   }
 
   const insecureOrigins = origins.filter(o => o.startsWith('http://') && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(o));
   if (insecureOrigins.length > 0) {
     errors.push(`ALLOWED_ORIGINS contiene orígenes HTTP no seguros: ${insecureOrigins.join(', ')}`);
+  }
+
+  if (!process.env.TRUST_PROXY) {
+    errors.push('TRUST_PROXY es obligatorio en producción (el proceso siempre corre detrás de un proxy TLS-terminating; sin esto, req.secure es falso siempre y el rate limiter de login usa la IP del proxy para todos)');
   }
 
   if (errors.length > 0) {

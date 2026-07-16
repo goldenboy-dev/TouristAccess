@@ -1,5 +1,14 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local dev database — never version data, only schema/migrations
+prisma/dev.db
+prisma/dev.db-journal
+*.db
+*.db-journal
 
 /generated/prisma

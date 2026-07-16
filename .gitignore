@@ -1,1 +1,9 @@
 .aider*
+
+# docker-compose reads this for POSTGRES_* — never version real credentials
+.env
+!.env.example
+
+# Local database backups (see backend/scripts/backup-db.sh)
+/backups/
+
