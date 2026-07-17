@@ -12,6 +12,7 @@ model User {
   name      String   @default("")
   password  String
   role      String   @default("CASHIER")
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
   // ── Password policy ──
@@ -29,6 +30,18 @@ model User {
   groupSummaries   GroupSummary[]
   refreshTokens    RefreshToken[]
   auditLogs        AuditLog[]
+  updatedSettings  AppSetting[]
+}
+
+// Generic key-value store for admin-editable config (pricing today; horarios
+// de operación / aforo máximo can reuse this table later without a new
+// migration).
+model AppSetting {
+  key         String   @id
+  value       String
+  updatedAt   DateTime @updatedAt
+  updatedById Int?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 // Persisted audit trail for critical actions (emission, validation,

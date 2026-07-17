@@ -13,7 +13,17 @@ import {
   confirmAndCreate, hideConfirmationModal, handlePrint, handlePrintThermal
 } from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
-import { loadUsers, handleRegister, handleEditName, saveEditName, cancelEditName } from './features/users.js';
+import {
+  loadUsers, handleRegister, handleEditName, saveEditName, cancelEditName,
+  handleEditRole, saveEditRole, cancelEditRole,
+  handleToggleActive, confirmToggleActive, cancelToggleActive,
+  loadPricing, handleSavePricing,
+} from './features/users.js';
+import { loadCashReport, handleExportCashReport } from './features/cash-report.js';
+import {
+  handleForcedPasswordChangeSubmit, showChangePasswordModal,
+  hideChangePasswordModal, handleChangePasswordSubmit
+} from './features/password.js';
 
 export function navigateTo(pageId) {
   domRefs.pages.forEach(p => p.classList.remove('active'));
@@ -29,7 +39,8 @@ export function navigateTo(pageId) {
 
   if (pageId === 'dashboard')     loadDashboard();
   if (pageId === 'tickets')       loadTickets();
-  if (pageId === 'users')         loadUsers();
+  if (pageId === 'users')       { loadUsers(); loadPricing(); }
+  if (pageId === 'caja')          loadCashReport();
   if (pageId === 'create-ticket') initCreateTicketPage();
   if (pageId === 'validate' && store.currentUser?.role === 'GUARD') {
     document.getElementById('validate-token').value = '';
@@ -98,6 +109,8 @@ function setupEventListeners() {
     if (action === 'cancel-ticket') handleCancelTicket(btn.dataset.id);
     if (action === 'print-thermal') handlePrintThermal(btn.dataset.id, btn);
     if (action === 'edit-name') handleEditName(parseInt(btn.dataset.id), btn.dataset.name);
+    if (action === 'edit-role') handleEditRole(parseInt(btn.dataset.id), btn.dataset.role);
+    if (action === 'toggle-active') handleToggleActive(parseInt(btn.dataset.id), btn.dataset.active, btn.dataset.email);
 
     // Print buttons
     if (btn.classList.contains('print-btn') && btn.dataset.print) {
@@ -150,9 +163,38 @@ function setupEventListeners() {
   document.getElementById('edit-name-save').addEventListener('click', saveEditName);
   document.getElementById('edit-name-cancel').addEventListener('click', cancelEditName);
 
+  // Edit-role modal buttons
+  document.getElementById('edit-role-save').addEventListener('click', saveEditRole);
+  document.getElementById('edit-role-cancel').addEventListener('click', cancelEditRole);
+
+  // Activate/deactivate modal buttons
+  document.getElementById('toggle-active-confirm').addEventListener('click', confirmToggleActive);
+  document.getElementById('toggle-active-cancel').addEventListener('click', cancelToggleActive);
+
+  // Pricing form
+  document.getElementById('pricing-form').addEventListener('submit', handleSavePricing);
+
+  // Cash report (Caja) filters + export
+  document.getElementById('caja-apply-filter').addEventListener('click', loadCashReport);
+  document.getElementById('caja-clear-filter').addEventListener('click', () => {
+    document.getElementById('caja-date-from').value = '';
+    document.getElementById('caja-date-to').value = '';
+    document.getElementById('caja-filter-cajero').value = '';
+    loadCashReport();
+  });
+  document.getElementById('caja-export-btn').addEventListener('click', handleExportCashReport);
+
   // Cancel-ticket modal buttons
   document.getElementById('cancel-ticket-confirm').addEventListener('click', confirmCancelTicket);
   document.getElementById('cancel-ticket-dismiss').addEventListener('click', hideCancelTicketModal);
+
+  // Forced password change (after login with PASSWORD_CHANGE_REQUIRED)
+  document.getElementById('password-change-form').addEventListener('submit', handleForcedPasswordChangeSubmit);
+
+  // Self-service password change (from the sidebar)
+  document.getElementById('change-password-btn').addEventListener('click', showChangePasswordModal);
+  document.getElementById('change-password-form').addEventListener('submit', handleChangePasswordSubmit);
+  document.getElementById('change-password-cancel').addEventListener('click', hideChangePasswordModal);
 }
 
 // ─── Init ────────────────────────────────────

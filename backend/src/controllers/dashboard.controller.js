@@ -1,6 +1,10 @@
 const prisma = require('../utils/prisma');
+const ticketService = require('../services/ticket.service');
+const cashReportService = require('../services/cash-report.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { startOfLocalDay, endOfLocalDay, startOfToday } = require('../utils/date');
+const { badRequest } = require('../utils/errors');
+const { PAYMENT_METHODS } = require('../constants/ticket');
 
 // ─── DASHBOARD STATS ────────────────────────────────────────
 const getStats = async (req, res, next) => {
@@ -90,7 +94,7 @@ const getUsers = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, email: true, name: true, role: true, createdAt: true,
+        id: true, email: true, name: true, role: true, active: true, createdAt: true,
         _count: { select: { createdTickets: true, scans: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -120,6 +124,118 @@ const updateUserName = async (req, res, next) => {
     });
 
     res.status(200).json({ message: 'Nombre actualizado correctamente', user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── UPDATE USER ROLE (ADMIN only) ───────────────────────────
+const updateUserRole = async (req, res, next) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const { role } = req.body; // validated by Zod
+
+    if (targetId === req.user.id) {
+      throw badRequest('No podés cambiar tu propio rol');
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!target) throw badRequest('Usuario no encontrado');
+
+    const [updatedUser] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: targetId },
+        data: { role },
+        select: { id: true, email: true, role: true },
+      }),
+      // A role change alters what the session is allowed to do — same
+      // criterion the password-change flow already applies.
+      prisma.refreshToken.updateMany({
+        where: { user_id: targetId, revoked: false },
+        data: { revoked: true },
+      }),
+    ]);
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.USER_ROLE_UPDATED,
+      resource_type: 'User',
+      resource_id: updatedUser.id,
+      metadata: { previousRole: target.role, newRole: role, targetEmail: updatedUser.email },
+    });
+
+    res.status(200).json({ message: 'Rol actualizado correctamente', user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── ACTIVATE / DEACTIVATE USER (ADMIN only) ─────────────────
+// Scope is deliberately narrow: only CASHIER/GUARD accounts can be toggled
+// here, and never the acting admin's own account — otherwise a panel action
+// could lock every admin out of the system.
+const updateUserActive = async (req, res, next) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const { active } = req.body; // validated by Zod
+
+    if (targetId === req.user.id) {
+      throw badRequest('No podés desactivar tu propia cuenta');
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!target) throw badRequest('Usuario no encontrado');
+    if (target.role === 'ADMIN') {
+      throw badRequest('No se puede activar/desactivar una cuenta de administrador desde este panel');
+    }
+
+    const operations = [
+      prisma.user.update({
+        where: { id: targetId },
+        data: { active },
+        select: { id: true, email: true, active: true },
+      }),
+    ];
+    if (active === false) {
+      operations.push(prisma.refreshToken.updateMany({
+        where: { user_id: targetId, revoked: false },
+        data: { revoked: true },
+      }));
+    }
+
+    const [updatedUser] = await prisma.$transaction(operations);
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.USER_ACTIVE_CHANGED,
+      resource_type: 'User',
+      resource_id: updatedUser.id,
+      metadata: { active, targetEmail: updatedUser.email },
+    });
+
+    res.status(200).json({
+      message: active ? 'Usuario reactivado' : 'Usuario desactivado',
+      user: updatedUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── PRICING (ADMIN only) ────────────────────────────────────
+const updatePricing = async (req, res, next) => {
+  try {
+    const { adult_price } = req.body; // validated by Zod
+
+    const previous = await ticketService.getPricing();
+    await ticketService.setAdultPrice(adult_price, req.user.id);
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.PRICING_UPDATED,
+      resource_type: 'AppSetting',
+      resource_id: 'adult_price',
+      metadata: { previousPrice: previous.ADULT_PRICE, newPrice: adult_price },
+    });
+
+    res.status(200).json({ message: 'Precio actualizado correctamente', pricing: await ticketService.getPricing() });
   } catch (error) {
     next(error);
   }
@@ -170,4 +286,51 @@ const getAuditLog = async (req, res, next) => {
   }
 };
 
-module.exports = { getStats, getUsers, updateUserName, getAuditLog };
+// ─── CASH REPORT / CIERRE DE CAJA (ADMIN only) ───────────────
+const getCashReport = async (req, res, next) => {
+  try {
+    const { date_from, date_to, cajero_id } = req.query; // validated by Zod
+    const report = await cashReportService.getCashReport({ date_from, date_to, cajero_id });
+    res.status(200).json(report);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
+
+const exportCashReport = async (req, res, next) => {
+  try {
+    const { date_from, date_to, cajero_id } = req.query; // validated by Zod
+    const { rows, grandTotal, grandTotalTickets } = await cashReportService.getCashReport({ date_from, date_to, cajero_id });
+
+    const header = ['Cajero', 'Email', 'Total tickets', ...PAYMENT_METHODS, 'Total', 'Cancelados'];
+    const lines = [header.map(csvCell).join(',')];
+
+    for (const row of rows) {
+      lines.push([
+        row.cajeroNombre,
+        row.cajeroEmail,
+        row.totalTickets,
+        ...PAYMENT_METHODS.map((m) => row.byMethod[m]),
+        row.totalAmount,
+        row.cancelledCount,
+      ].map(csvCell).join(','));
+    }
+
+    lines.push(['TOTAL', '', grandTotalTickets, ...PAYMENT_METHODS.map(() => ''), grandTotal, ''].map(csvCell).join(','));
+
+    const from = date_from || 'hoy';
+    const to = date_to || 'hoy';
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="cierre-caja-${from}_a_${to}.csv"`);
+    res.status(200).send(lines.join('\n'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getStats, getUsers, updateUserName, updateUserRole, updateUserActive,
+  updatePricing, getAuditLog, getCashReport, exportCashReport,
+};

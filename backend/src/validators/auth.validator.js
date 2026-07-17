@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { getPasswordErrors, MAX_LENGTH } = require('../utils/password');
+const { ROLES } = require('../constants/user');
 
 // Strong password rules live in utils/password.js so the seed, the validator
 // and the controller cannot drift apart.
@@ -22,7 +23,7 @@ const registerSchema = z.object({
   email:    z.string().email('Email inválido').max(100),
   password: strongPassword,
   // Zod 4 replaced `errorMap` with `error`; the old form was silently ignored.
-  role:     z.enum(['CASHIER', 'GUARD', 'ADMIN'], { error: () => 'Rol no válido. Valores permitidos: CASHIER, GUARD, ADMIN' }),
+  role:     z.enum(ROLES, { error: () => `Rol no válido. Valores permitidos: ${ROLES.join(', ')}` }),
 });
 
 const refreshSchema = z.object({

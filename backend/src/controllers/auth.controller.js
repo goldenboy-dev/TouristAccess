@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const prisma = require('../utils/prisma');
 const { logger } = require('../utils/logger');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
-const { badRequest, unauthorized, notFound, locked: lockedError } = require('../utils/errors');
+const { badRequest, unauthorized, forbidden, notFound, locked: lockedError } = require('../utils/errors');
 const {
   PASSWORD_CHANGE_SCOPE,
   MAX_FAILED_ATTEMPTS,
@@ -100,6 +100,19 @@ const login = async (req, res, next) => {
         metadata: { email, reason: 'user_not_found' },
       });
       throw unauthorized('Credenciales inválidas');
+    }
+
+    // ── Deactivated account (checked before lockout/password) ──
+    if (user.active === false) {
+      await auditFromRequest(req, {
+        event: AUDIT_EVENTS.AUTH_LOGIN_FAILED,
+        outcome: 'FAILURE',
+        actor_id: user.id,
+        actor_email: user.email,
+        actor_role: user.role,
+        metadata: { reason: 'account_inactive' },
+      });
+      throw forbidden('Cuenta desactivada. Contactá a un administrador.', { code: 'ACCOUNT_INACTIVE' });
     }
 
     // ── Lockout check (before verifying the password) ──

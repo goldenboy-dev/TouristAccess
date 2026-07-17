@@ -6,6 +6,7 @@
  */
 const { z } = require('zod');
 const { optionalDate, optionalId, requiredId, boundedInt, optionalString, optionalEnum } = require('./query');
+const { ROLES } = require('../constants/user');
 
 const AUDIT_MAX_LIMIT = 200;
 
@@ -15,6 +16,29 @@ const updateUserNameSchema = z.object({
     .min(2, 'El nombre debe tener al menos 2 caracteres')
     .max(100, 'El nombre no puede superar 100 caracteres')
     .refine((v) => !/<[^>]*>/.test(v), 'El nombre no puede contener HTML'),
+});
+
+const updateUserRoleSchema = z.object({
+  role: z.enum(ROLES, { error: () => `Rol no válido. Valores permitidos: ${ROLES.join(', ')}` }),
+});
+
+const updateUserActiveSchema = z.object({
+  active: z.boolean({ error: () => 'active debe ser true o false' }),
+});
+
+// Cordura, no un límite de negocio real: evita que un typo (ej. un cero de
+// más) quede guardado como el precio de entrada sin que nadie lo note.
+const updatePricingSchema = z.object({
+  adult_price: z.coerce.number({ message: 'adult_price debe ser un número' })
+    .int('adult_price debe ser un entero')
+    .positive('adult_price debe ser mayor a 0')
+    .max(10_000_000, 'adult_price no puede superar 10.000.000'),
+});
+
+const cashReportQuerySchema = z.object({
+  date_from: optionalDate('date_from'),
+  date_to:   optionalDate('date_to'),
+  cajero_id: optionalId('cajero_id'),
 });
 
 const statsQuerySchema = z.object({
@@ -61,6 +85,10 @@ const cashierHistoryQuerySchema = z.object({
 
 module.exports = {
   updateUserNameSchema,
+  updateUserRoleSchema,
+  updateUserActiveSchema,
+  updatePricingSchema,
+  cashReportQuerySchema,
   statsQuerySchema,
   auditLogQuerySchema,
   fraudSummaryQuerySchema,

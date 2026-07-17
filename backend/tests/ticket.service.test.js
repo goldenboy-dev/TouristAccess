@@ -9,6 +9,9 @@ const prismaMock = {
   user: { findUnique: vi.fn() },
   scan: { findFirst: vi.fn(), create: vi.fn() },
   groupSummary: { create: vi.fn(), findUnique: vi.fn() },
+  // No row by default: getPricing() falls back to the ADULT_PRICE env var
+  // (set to 10000 in vitest.config.mjs) — same value PRICING.ADULT used to be.
+  appSetting: { findUnique: vi.fn(), upsert: vi.fn() },
   $transaction: vi.fn(),
 };
 
@@ -17,7 +20,8 @@ const prismaMock = {
 mockModule('src/utils/prisma.js', prismaMock);
 
 const ticketService = loadModule('src/services/ticket.service.js');
-const { PRICING } = ticketService;
+// Matches the ADULT_PRICE env fallback used when no AppSetting row exists.
+const ADULT_PRICE = 10000;
 
 const activeTicket = (overrides = {}) => ({
   id: 42,
@@ -44,13 +48,14 @@ describe('buildTicketRows (pricing)', () => {
   const rowsFor = (opts) => ticketService.buildTicketRows({
     adults: 0, children: 0, locals: 0,
     customer_name: undefined, childrenCedulas: [], localsCedulas: [],
+    pricing: { ADULT_PRICE, CHILD_PRICE: 0, LOCAL_PRICE: 0 },
     ...opts,
   });
 
   it('charges the adult price only to adults', () => {
     const rows = rowsFor({ adults: 2, children: 3, locals: 1, localsCedulas: ['4123456'] });
 
-    expect(rows.filter(r => r.type === 'ADULT').every(r => r.price === PRICING.ADULT)).toBe(true);
+    expect(rows.filter(r => r.type === 'ADULT').every(r => r.price === ADULT_PRICE)).toBe(true);
     expect(rows.filter(r => r.type !== 'ADULT').every(r => r.price === 0)).toBe(true);
   });
 
@@ -58,7 +63,7 @@ describe('buildTicketRows (pricing)', () => {
     const rows = rowsFor({ adults: 4, children: 6, locals: 2, localsCedulas: ['1', '2'] });
     const total = rows.reduce((sum, r) => sum + r.price, 0);
 
-    expect(total).toBe(4 * PRICING.ADULT);
+    expect(total).toBe(4 * ADULT_PRICE);
     expect(rows).toHaveLength(12);
   });
 
@@ -168,7 +173,7 @@ describe('createTicketGroup', () => {
       },
     });
 
-    expect(result.totalAmount).toBe(3 * PRICING.ADULT);
+    expect(result.totalAmount).toBe(3 * ADULT_PRICE);
     expect(result.qty).toBe(5);
     expect(result.tickets).toHaveLength(5);
   });

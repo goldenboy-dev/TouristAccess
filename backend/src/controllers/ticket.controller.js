@@ -167,7 +167,7 @@ const cancelTicket = async (req, res, next) => {
 // ─── PRICING (so the frontend never hardcodes prices) ────────
 const getPricing = async (_req, res, next) => {
   try {
-    res.status(200).json(ticketService.getPricing());
+    res.status(200).json(await ticketService.getPricing());
   } catch (error) {
     next(error);
   }

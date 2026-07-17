@@ -28,6 +28,9 @@ const AUDIT_EVENTS = {
   AUTH_SESSIONS_REVOKED_SELF: 'auth.sessions_revoked.self',
   AUTH_SESSIONS_REVOKED_ADMIN: 'auth.sessions_revoked.admin',
   USER_NAME_UPDATED: 'user.name_updated',
+  USER_ROLE_UPDATED: 'user.role_updated',
+  USER_ACTIVE_CHANGED: 'user.active_changed',
+  PRICING_UPDATED: 'pricing.updated',
 };
 
 /**

@@ -3,6 +3,7 @@
 export const domRefs = {
   get loginScreen() { return document.getElementById('login-screen'); },
   get appScreen() { return document.getElementById('app-screen'); },
+  get passwordChangeScreen() { return document.getElementById('password-change-screen'); },
   get loginForm() { return document.getElementById('login-form'); },
   get loginError() { return document.getElementById('login-error'); },
   get logoutBtn() { return document.getElementById('logout-btn'); },

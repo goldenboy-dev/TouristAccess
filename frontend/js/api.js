@@ -20,13 +20,16 @@ function onRefreshed(token) {
  */
 export async function api(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (store.authToken) headers['Authorization'] = `Bearer ${store.authToken}`;
-  
-  let res = await fetch(`${API_URL}${endpoint}`, { 
-    ...options, 
-    headers: { ...headers, ...options.headers } 
+  // `options.token` overrides the stored session token — used for the
+  // restricted password-change token, which is never written to the store.
+  const bearer = options.token || store.authToken;
+  if (bearer) headers['Authorization'] = `Bearer ${bearer}`;
+
+  let res = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: { ...headers, ...options.headers }
   });
-  
+
   let data = await res.json();
 
   // If token expired, try to refresh
@@ -72,6 +75,11 @@ export async function api(endpoint, options = {}) {
     return retryOriginalRequest;
   }
 
-  if (!res.ok) throw new Error(data.error || data.message || 'Error en la solicitud');
+  if (!res.ok) {
+    const err = new Error(data.error || data.message || 'Error en la solicitud');
+    err.code = data.code;
+    err.details = data.details;
+    throw err;
+  }
   return data;
 }

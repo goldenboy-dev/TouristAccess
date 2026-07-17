@@ -3,11 +3,13 @@
  * Called BEFORE any other initialization in index.js.
  */
 
+// ADULT_PRICE is intentionally NOT required: it's now DB-backed (AppSetting,
+// admin-editable from the panel) and falls back to this env var only if no
+// row exists yet — see ticket.service.js: getPricing().
 const REQUIRED = [
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
   'DATABASE_URL',
-  'ADULT_PRICE',
   'ALLOWED_ORIGINS',
 ];
 

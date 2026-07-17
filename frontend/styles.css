@@ -554,6 +554,16 @@ body {
   background: rgba(239,68,68,0.15);
 }
 
+.btn-change-password {
+  background: rgba(0,180,216,0.08);
+  border-color: rgba(0,180,216,0.15);
+  color: var(--info);
+}
+
+.btn-change-password:hover {
+  background: rgba(0,180,216,0.15);
+}
+
 /* ============================================
    Main Content
    ============================================ */
@@ -733,6 +743,12 @@ body {
   background: var(--danger-bg);
   color: var(--danger);
   border: 1px solid rgba(239,68,68,0.25);
+}
+
+.badge-inactive {
+  background: rgba(148,163,184,0.12);
+  color: #64748b;
+  border: 1px solid rgba(148,163,184,0.25);
 }
 
 .badge-admin {

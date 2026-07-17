@@ -15,11 +15,30 @@ const { renderTicketQR, renderTicketHTML, persistTicketHTML } = require('./ticke
 const { PAYMENT_METHODS, MAX_PERSONS, MAX_VISIT_DATE_DRIFT_DAYS } = require('../constants/ticket');
 
 // ─── Server-side pricing (NEVER trust frontend) ──────────────
-const ADULT_PRICE = parseInt(process.env.ADULT_PRICE) || 10000;
-const PRICING = { ADULT: ADULT_PRICE, CHILD: 0, LOCAL: 0 };
+// CHILD/LOCAL stay free by design — that's the whole premise the anti-fraud
+// panel is built on (% of free entries vs. history). Only ADULT is priced,
+// and it now lives in the DB (AppSetting) so an admin can change it from the
+// panel without a redeploy. The env var is kept only as a fallback for a
+// fresh DB that has no row yet — self-healing, no data migration needed.
+const ADULT_PRICE_KEY = 'adult_price';
+const ADULT_PRICE_ENV_FALLBACK = parseInt(process.env.ADULT_PRICE) || 10000;
 
-function getPricing() {
-  return { ADULT_PRICE: PRICING.ADULT, CHILD_PRICE: PRICING.CHILD, LOCAL_PRICE: PRICING.LOCAL };
+async function getPricing() {
+  const setting = await prisma.appSetting.findUnique({ where: { key: ADULT_PRICE_KEY } });
+  const adultPrice = setting ? parseInt(setting.value) : ADULT_PRICE_ENV_FALLBACK;
+  return { ADULT_PRICE: adultPrice, CHILD_PRICE: 0, LOCAL_PRICE: 0 };
+}
+
+async function setAdultPrice(value, actorId) {
+  const price = parseInt(value);
+  if (!Number.isInteger(price) || price <= 0) {
+    throw badRequest('El precio debe ser un entero positivo');
+  }
+  await prisma.appSetting.upsert({
+    where: { key: ADULT_PRICE_KEY },
+    create: { key: ADULT_PRICE_KEY, value: String(price), updatedById: actorId },
+    update: { value: String(price), updatedById: actorId },
+  });
 }
 
 // ─── CREATE ──────────────────────────────────────────────────
@@ -49,8 +68,9 @@ function assertCreateInvariants({ adults, children, locals, payment_method, cust
 }
 
 // Builds the per-person rows: names, prices and cédulas. Pure — the pricing
-// decisions live here and nowhere else.
-function buildTicketRows({ adults, children, locals, customer_name, childrenCedulas, localsCedulas }) {
+// decisions live here and nowhere else. `pricing` is the resolved value from
+// getPricing() (never read from env/DB directly, so this stays testable).
+function buildTicketRows({ adults, children, locals, customer_name, childrenCedulas, localsCedulas, pricing }) {
   // Local date, not toISOString(): a ticket sold at 21:00 in Paraguay would
   // otherwise be printed with tomorrow's date in its code.
   const dateStr = toLocalDateStr(new Date()).replace(/-/g, '');
@@ -62,16 +82,16 @@ function buildTicketRows({ adults, children, locals, customer_name, childrenCedu
     : `VIS-${dateStr}-${index.toString().padStart(2, '0')}`);
 
   for (let i = 0; i < adults; i++) {
-    rows.push({ type: 'ADULT', name: nameFor(), price: PRICING.ADULT, cedula: null });
+    rows.push({ type: 'ADULT', name: nameFor(), price: pricing.ADULT_PRICE, cedula: null });
     index++;
   }
   for (let i = 0; i < children; i++) {
     const cedula = childrenCedulas[i] ? String(childrenCedulas[i]).trim() || null : null;
-    rows.push({ type: 'CHILD', name: nameFor(), price: PRICING.CHILD, cedula });
+    rows.push({ type: 'CHILD', name: nameFor(), price: pricing.CHILD_PRICE, cedula });
     index++;
   }
   for (let i = 0; i < locals; i++) {
-    rows.push({ type: 'LOCAL', name: nameFor(), price: PRICING.LOCAL, cedula: String(localsCedulas[i]).trim() });
+    rows.push({ type: 'LOCAL', name: nameFor(), price: pricing.LOCAL_PRICE, cedula: String(localsCedulas[i]).trim() });
     index++;
   }
 
@@ -116,10 +136,11 @@ async function createTicketGroup({ input, cashierId }) {
   });
   if (!cashier) throw notFound('Cajero no encontrado');
 
+  const pricing = await getPricing();
   const groupId = randomUUID();
   const operationCode = groupId.split('-')[0]; // short code e.g. "30b520a4"
-  const totalAmount = adults * PRICING.ADULT;
-  const rows = buildTicketRows({ adults, children, locals, customer_name, childrenCedulas, localsCedulas });
+  const totalAmount = adults * pricing.ADULT_PRICE;
+  const rows = buildTicketRows({ adults, children, locals, customer_name, childrenCedulas, localsCedulas, pricing });
   // Local midnight, not UTC midnight: the guard compares this against their own
   // "today", and west of Greenwich a UTC-parsed date is the previous day.
   const visitDate = parseLocalDate(visit_date);
@@ -448,7 +469,7 @@ module.exports = {
   listTickets,
   cancelTicketById,
   getPricing,
+  setAdultPrice,
   buildTicketRows,
   assertCreateInvariants,
-  PRICING,
 };

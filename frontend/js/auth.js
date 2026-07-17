@@ -4,6 +4,7 @@ import { domRefs, getRoleName } from './utils/dom.js';
 import { navigateTo } from './main.js';
 import { stopScanner } from './features/scanner.js';
 import { showToast } from './utils/notifications.js';
+import { showForcedPasswordChange } from './features/password.js';
 
 export function parseJwt(token) {
   try { return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return null; }
@@ -73,10 +74,16 @@ export function checkAuth() {
 }
 
 export async function login(email, password) {
-  const data = await api('/auth/login', { 
-    method: 'POST', 
-    body: JSON.stringify({ email, password }) 
+  const data = await api('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
   });
+
+  if (data.passwordChangeRequired) {
+    showForcedPasswordChange(data.passwordChangeToken, data.message);
+    return;
+  }
+
   handleLogin(data.user, data.accessToken, data.refreshToken);
   showToast(`Bienvenido, ${getRoleName(data.user.role)}`, 'success');
 }

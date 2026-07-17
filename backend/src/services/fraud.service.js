@@ -1,10 +1,17 @@
 const { Prisma } = require('@prisma/client');
 const prisma = require('../utils/prisma');
+const ticketService = require('./ticket.service');
 const { logger } = require('../utils/logger');
 const { resolveLocalDay, toLocalDateStr, startOfToday } = require('../utils/date');
 const { FREE_VISITOR_TYPES, COUNTED_STATUSES } = require('../constants/ticket');
 
 // ─── Config from env ─────────────────────────────────────────
+// Fallback only — used as the default `adultPrice` for the pure metric
+// builders (and by their unit tests). The real entry points below always
+// resolve the actual price via ticketService.getPricing(), which is now
+// DB-backed (see AppSetting) so this constant can never drift from what a
+// ticket was actually sold for. Reading process.env independently here is
+// exactly the divergence this project already got burned by once.
 const ADULT_PRICE       = parseInt(process.env.ADULT_PRICE) || 10000;
 const PP_CRITICAL       = parseInt(process.env.ALERT_FREE_PP_CRITICAL) || 20;
 const PP_WARNING        = parseInt(process.env.ALERT_FREE_PP_WARNING) || 10;
@@ -85,12 +92,12 @@ function classifyRisk({ brecha_ingresos, diferencia_pp }) {
   return 'NORMAL';
 }
 
-function buildCashierMetrics({ cashier, todayStats, ops, historico_pct_gratuitos }) {
+function buildCashierMetrics({ cashier, todayStats, ops, historico_pct_gratuitos, adultPrice = ADULT_PRICE }) {
   const { total_adults, total_children, total_locals, total_persons, ingresos_declarados } = todayStats;
   const total_gratuitos = total_children + total_locals;
 
   const pct_gratuitos_hoy = total_persons > 0 ? r2((total_gratuitos / total_persons) * 100) : 0;
-  const ingresos_esperados = total_adults * ADULT_PRICE;
+  const ingresos_esperados = total_adults * adultPrice;
 
   let brecha_ingresos = ingresos_esperados - ingresos_declarados;
   if (brecha_ingresos < 0) {
@@ -157,6 +164,8 @@ async function calculateCashierFraudMetrics(dateStr) {
   const histEnd = new Date(dayStart);
   histEnd.setMilliseconds(-1); // up to the day before the one being analysed
 
+  const { ADULT_PRICE: adultPrice } = await ticketService.getPricing();
+
   // All four are independent — one round trip.
   const [todayRows, cashiers, opsRows, histRows] = await Promise.all([
     prisma.ticket.groupBy({
@@ -198,6 +207,7 @@ async function calculateCashierFraudMetrics(dateStr) {
       todayStats,
       ops: opsByCashier.get(cashier.id) || { total_operaciones: 0, operaciones_sospechosas: 0 },
       historico_pct_gratuitos: historico,
+      adultPrice,
     });
 
     if (metrics.nivel_riesgo === 'CRITICO') alertasCriticas++;
@@ -227,6 +237,7 @@ async function calculateCashierFraudMetrics(dateStr) {
 // Same story as the metrics above: Postgres groups by day and returns one row
 // per day instead of every ticket in the window.
 async function getCashierDailyHistory({ cashierId, days }) {
+  const { ADULT_PRICE: adultPrice } = await ticketService.getPricing();
   const today = startOfToday();
   const startDate = new Date(today);
   startDate.setDate(startDate.getDate() - days);
@@ -249,7 +260,7 @@ async function getCashierDailyHistory({ cashierId, days }) {
   let sumPct = 0;
   const history = rows.map((row) => {
     const pct = row.total_persons > 0 ? r2((row.free / row.total_persons) * 100) : 0;
-    const expected = row.adults * ADULT_PRICE;
+    const expected = row.adults * adultPrice;
     sumPct += pct;
     return {
       date: row.date,
