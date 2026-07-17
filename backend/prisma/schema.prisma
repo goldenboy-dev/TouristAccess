@@ -22,12 +22,13 @@ model User {
   failed_login_attempts Int       @default(0)
   locked_until          DateTime?
 
-  createdTickets Ticket[]
-  guardedTickets Ticket[]       @relation("TicketGuard")
-  scans          Scan[]
-  groupSummaries GroupSummary[]
-  refreshTokens  RefreshToken[]
-  auditLogs      AuditLog[]
+  createdTickets   Ticket[]
+  guardedTickets   Ticket[]       @relation("TicketGuard")
+  cancelledTickets Ticket[]       @relation("TicketCancelledBy")
+  scans            Scan[]
+  groupSummaries   GroupSummary[]
+  refreshTokens    RefreshToken[]
+  auditLogs        AuditLog[]
 }
 
 // Persisted audit trail for critical actions (emission, validation,
@@ -85,6 +86,13 @@ model Ticket {
   guard          User?    @relation("TicketGuard", fields: [guard_id], references: [id])
   free_confirmed    String?
   free_confirmed_at DateTime?
+
+  // Trazabilidad de anulación: quién, cuándo y por qué. El estado en sí
+  // (status = CANCELLED) no alcanza para auditar/reportar cancelaciones.
+  cancelled_by_id      Int?
+  cancelledBy          User?     @relation("TicketCancelledBy", fields: [cancelled_by_id], references: [id])
+  cancelled_at         DateTime?
+  cancellation_reason  String?
 
   group_summary_id Int?
   groupSummary     GroupSummary? @relation(fields: [group_summary_id], references: [id])

@@ -52,6 +52,14 @@ const validateTicketSchema = z.object({
   free_confirmed: z.boolean().optional(),
 });
 
+const cancelTicketSchema = z.object({
+  reason: z.string()
+    .trim()
+    .min(5, 'El motivo de la anulación debe tener al menos 5 caracteres')
+    .max(500, 'El motivo no puede superar 500 caracteres')
+    .refine((v) => !/<[^>]*>/.test(v), 'El motivo no puede contener HTML'),
+});
+
 const listTicketsQuerySchema = z.object({
   status:         optionalEnum(TICKET_STATUSES, 'status debe ser ACTIVE, USED o CANCELLED'),
   visitor_type:   optionalEnum(VISITOR_TYPES, 'visitor_type debe ser ADULT, CHILD o LOCAL'),
@@ -66,6 +74,7 @@ const listTicketsQuerySchema = z.object({
 module.exports = {
   createTicketSchema,
   validateTicketSchema,
+  cancelTicketSchema,
   listTicketsQuerySchema,
   MAX_PERSONS,
   MAX_VISIT_DATE_DRIFT_DAYS,

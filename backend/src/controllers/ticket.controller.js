@@ -4,6 +4,7 @@
  * requestId) and shapes the response. No business rules live here.
  */
 const ticketService = require('../services/ticket.service');
+const thermalPrinterService = require('../services/thermal-printer.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { parseLocalDate } = require('../utils/date');
 
@@ -134,7 +135,11 @@ const listTickets = async (req, res, next) => {
 // ─── CANCEL ──────────────────────────────────────────────────
 const cancelTicket = async (req, res, next) => {
   try {
-    const { previous, updated } = await ticketService.cancelTicketById({ id: req.params.id });
+    const { previous, updated } = await ticketService.cancelTicketById({
+      id: req.params.id,
+      reason: req.body.reason,
+      cancelledById: req.user.id,
+    });
 
     await auditFromRequest(req, {
       event: AUDIT_EVENTS.TICKET_CANCELLED,
@@ -149,6 +154,7 @@ const cancelTicket = async (req, res, next) => {
         groupId: previous.group_id,
         issuedBy: previous.createdById,
         visitDate: previous.visit_date.toISOString(),
+        reason: req.body.reason,
       },
     });
 
@@ -167,4 +173,23 @@ const getPricing = async (_req, res, next) => {
   }
 };
 
-module.exports = { createTicket, validateTicket, getTicket, listTickets, cancelTicket, getGroupByCode, getPricing };
+// ─── PRINT (thermal, ESC/POS over the configured network printer) ────
+const printThermal = async (req, res, next) => {
+  try {
+    const ticket = await ticketService.getTicketById({ id: req.params.id, actor: actorFrom(req) });
+    await thermalPrinterService.printTicket(ticket, req.user.email);
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_PRINTED_THERMAL,
+      resource_type: 'Ticket',
+      resource_id: ticket.id,
+      metadata: { visitorType: ticket.visitor_type, status: ticket.status },
+    });
+
+    res.status(200).json({ message: 'Ticket enviado a la impresora' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { createTicket, validateTicket, getTicket, listTickets, cancelTicket, getGroupByCode, getPricing, printThermal };

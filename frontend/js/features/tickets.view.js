@@ -1,7 +1,7 @@
 import { store } from '../store.js';
 import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
-import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing } from './tickets.service.js';
+import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing, printThermal as printThermalApi } from './tickets.service.js';
 
 // ─── PRICING ────────────────────────────────────────────────
 // [FIX 6] No longer hardcoded — fetched from backend so it never drifts
@@ -65,7 +65,9 @@ export async function loadTickets() {
         <td>${t.price > 0 ? '₲' + t.price.toLocaleString() : '<span style="color:var(--success)">Gratis</span>'}</td>
         <td><span class="badge badge-payment">${getPaymentIcon(t.payment_method)} ${t.payment_method || 'CASH'}</span></td>
         <td>${formatDate(t.visit_date)}</td>
-        <td><span class="badge badge-${t.status.toLowerCase()}">${getStatusName(t.status)}</span></td>
+        <td>${t.status === 'CANCELLED' && t.cancellation_reason
+            ? `<span class="badge badge-${t.status.toLowerCase()}" title="Motivo: ${escapeHtml(t.cancellation_reason)}${t.cancelledBy ? ` · Por: ${escapeHtml(t.cancelledBy.email)}` : ''}${t.cancelled_at ? ` · ${formatDate(t.cancelled_at)}` : ''}">${getStatusName(t.status)} ℹ️</span>`
+            : `<span class="badge badge-${t.status.toLowerCase()}">${getStatusName(t.status)}</span>`}</td>
         <td>${t.createdBy?.email.split('@')[0] || '-'}</td>
         ${tokenCell}
         <td>${t.status === 'ACTIVE' ? `<button class="btn-danger-sm" data-action="cancel-ticket" data-id="${t.id}">Cancelar</button>` : '—'}</td>
@@ -111,7 +113,11 @@ export function handleCancelTicket(id) {
     <p style="margin-top:.5rem;color:var(--text-secondary);font-size:.85rem">
       La anulación queda registrada en el log de auditoría y no se puede deshacer.
     </p>`;
+  const reasonInput = document.getElementById('cancel-ticket-reason');
+  reasonInput.value = '';
+  document.getElementById('cancel-ticket-reason-error').classList.add('hidden');
   document.getElementById('cancel-ticket-modal').classList.remove('hidden');
+  reasonInput.focus();
 }
 
 export function hideCancelTicketModal() {
@@ -120,11 +126,20 @@ export function hideCancelTicketModal() {
 
 export async function confirmCancelTicket() {
   const id = document.getElementById('cancel-ticket-id').value;
+  const reasonInput = document.getElementById('cancel-ticket-reason');
+  const reason = reasonInput.value.trim();
+
+  if (reason.length < 5) {
+    document.getElementById('cancel-ticket-reason-error').classList.remove('hidden');
+    reasonInput.focus();
+    return;
+  }
+
   const btn = document.getElementById('cancel-ticket-confirm');
   btn.disabled = true;
 
   try {
-    await cancelTicketApi(id);
+    await cancelTicketApi(id, reason);
     hideCancelTicketModal();
     showToast('Ticket anulado', 'success');
     loadTickets();
@@ -415,6 +430,9 @@ function renderIndividualTickets(results, cashierEmail) {
           <span class="ticket-card-type">${typeName}</span>
           <span class="ticket-card-price">${t.price > 0 ? '₲' + t.price.toLocaleString() : 'GRATIS'}</span>
         </div>
+        <div style="padding:.5rem .75rem 0;">
+          <button class="btn-secondary print-thermal-btn" data-action="print-thermal" data-id="${t.id}" style="font-size:.75rem;padding:.4rem .8rem;">🖨️📡 Imprimir en térmica</button>
+        </div>
         <div class="ticket-result-layout">
           <div class="result-details" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;flex:1">
             <div class="result-item"><span class="label">ID</span><span class="value">#${t.id}</span></div>
@@ -439,6 +457,23 @@ function renderIndividualTickets(results, cashierEmail) {
         </div>
       </div>`;
   }).join('');
+}
+
+// ─── Thermal printer (ESC/POS over network) ──────────────────
+// Distinct from handlePrint() below: that one opens the browser print
+// dialog on an HTML template. This one hits the backend, which pushes raw
+// ESC/POS bytes straight to the configured network printer — no dialog,
+// no window.print(). Fails loudly (503) if no printer is configured/reachable.
+export async function handlePrintThermal(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    await printThermalApi(id);
+    showToast('Ticket enviado a la impresora térmica', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ─── Print handler ───────────────────────────────────────────

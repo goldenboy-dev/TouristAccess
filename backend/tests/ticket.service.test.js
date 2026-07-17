@@ -251,10 +251,37 @@ describe('cancelTicketById', () => {
 
     expect(prismaMock.ticket.updateMany).toHaveBeenCalledWith({
       where: { id: 42, status: 'ACTIVE' },
-      data: { status: 'CANCELLED' },
+      data: {
+        status: 'CANCELLED',
+        cancelled_by_id: undefined,
+        cancelled_at: expect.any(Date),
+        cancellation_reason: undefined,
+      },
     });
     expect(previous.status).toBe('ACTIVE');
     expect(updated.status).toBe('CANCELLED');
+  });
+
+  // Full traceability: who cancelled it and why has to land on the ticket
+  // row itself, not only in the (harder to report on) audit log.
+  it('persists who cancelled it, when, and why', async () => {
+    const ticket = activeTicket();
+    prismaMock.ticket.findUnique
+      .mockResolvedValueOnce(ticket)
+      .mockResolvedValueOnce({ ...ticket, status: 'CANCELLED' });
+    prismaMock.ticket.updateMany.mockResolvedValue({ count: 1 });
+
+    await ticketService.cancelTicketById({ id: '42', reason: 'Cliente no llegó', cancelledById: 7 });
+
+    expect(prismaMock.ticket.updateMany).toHaveBeenCalledWith({
+      where: { id: 42, status: 'ACTIVE' },
+      data: {
+        status: 'CANCELLED',
+        cancelled_by_id: 7,
+        cancelled_at: expect.any(Date),
+        cancellation_reason: 'Cliente no llegó',
+      },
+    });
   });
 
   it('404s for a ticket that does not exist', async () => {

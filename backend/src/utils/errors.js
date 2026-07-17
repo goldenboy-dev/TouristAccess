@@ -25,5 +25,6 @@ const unauthorized = (message = 'No autorizado', options)   => new AppError(mess
 const forbidden    = (message = 'Acceso denegado', options) => new AppError(message, 403, options);
 const notFound     = (message = 'Recurso no encontrado', options) => new AppError(message, 404, options);
 const locked       = (message, options)               => new AppError(message, 423, options);
+const serviceUnavailable = (message, options)          => new AppError(message, 503, options);
 
-module.exports = { AppError, badRequest, unauthorized, forbidden, notFound, locked };
+module.exports = { AppError, badRequest, unauthorized, forbidden, notFound, locked, serviceUnavailable };

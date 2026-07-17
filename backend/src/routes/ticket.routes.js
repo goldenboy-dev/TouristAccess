@@ -4,7 +4,7 @@ const rateLimit = require('express-rate-limit');
 const ticketController = require('../controllers/ticket.controller');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { validate, validateQuery } = require('../middlewares/validate');
-const { createTicketSchema, validateTicketSchema, listTicketsQuerySchema } = require('../validators/ticket.validator');
+const { createTicketSchema, validateTicketSchema, cancelTicketSchema, listTicketsQuerySchema } = require('../validators/ticket.validator');
 const { logger } = require('../utils/logger');
 
 // ─── Rate limiters ──────────────────────────────────────────
@@ -49,7 +49,10 @@ router.get('/group/:operationCode', authenticateToken, authorizeRoles('ADMIN', '
 // Get specific ticket details (Admin & Cashier)
 router.get('/:id', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.getTicket);
 
-// Cancel a ticket (Admin only)
-router.patch('/:id/cancel', authenticateToken, authorizeRoles('ADMIN'), ticketController.cancelTicket);
+// Cancel a ticket (Admin only) — motivo obligatorio, queda en la trazabilidad
+router.patch('/:id/cancel', authenticateToken, authorizeRoles('ADMIN'), validate(cancelTicketSchema), ticketController.cancelTicket);
+
+// Print a ticket on the configured network thermal printer (Admin & Cashier)
+router.post('/:id/print-thermal', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.printThermal);
 
 module.exports = router;

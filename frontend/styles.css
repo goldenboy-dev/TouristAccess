@@ -156,6 +156,7 @@ body {
 }
 
 .form-group input,
+.form-group textarea,
 .select-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -169,15 +170,28 @@ body {
   outline: none;
 }
 
+.form-group textarea {
+  resize: vertical;
+}
+
 .form-group input:focus,
+.form-group textarea:focus,
 .select-input:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(42, 157, 78, 0.15);
   background: rgba(255,255,255,0.08);
 }
 
-.form-group input::placeholder {
+.form-group input::placeholder,
+.form-group textarea::placeholder {
   color: var(--text-muted);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--danger);
+  font-size: 0.8rem;
 }
 
 .input-readonly {

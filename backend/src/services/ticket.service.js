@@ -397,7 +397,10 @@ async function listTickets({ filters, actor }) {
   const [tickets, total] = await Promise.all([
     prisma.ticket.findMany({
       where,
-      include: { createdBy: { select: { id: true, email: true } } },
+      include: {
+        createdBy: { select: { id: true, email: true } },
+        cancelledBy: { select: { id: true, email: true } },
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
@@ -409,7 +412,7 @@ async function listTickets({ filters, actor }) {
 }
 
 // ─── CANCEL ──────────────────────────────────────────────────
-async function cancelTicketById({ id }) {
+async function cancelTicketById({ id, reason, cancelledById }) {
   const ticketId = parseInt(id);
   const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
 
@@ -418,10 +421,17 @@ async function cancelTicketById({ id }) {
   if (ticket.status === 'USED') throw badRequest('No se puede cancelar un ticket ya utilizado');
 
   // Guarded update: only ACTIVE→CANCELLED, so a scan landing between the read
-  // above and this write cannot be undone by the cancellation.
+  // above and this write cannot be undone by the cancellation. Who/when/why
+  // land in the same write so the ticket itself carries the traceability,
+  // not just the (append-only, harder to report on) audit log.
   const result = await prisma.ticket.updateMany({
     where: { id: ticketId, status: 'ACTIVE' },
-    data: { status: 'CANCELLED' },
+    data: {
+      status: 'CANCELLED',
+      cancelled_by_id: cancelledById,
+      cancelled_at: new Date(),
+      cancellation_reason: reason,
+    },
   });
 
   if (result.count === 0) throw badRequest('El ticket cambió de estado, recargá e intentá de nuevo');

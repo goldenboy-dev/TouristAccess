@@ -4,8 +4,12 @@ export async function fetchTickets(queryParams = '') {
   return await api(`/tickets?${queryParams}`);
 }
 
-export async function cancelTicket(id) {
-  return await api(`/tickets/${id}/cancel`, { method: 'PATCH' });
+export async function cancelTicket(id, reason) {
+  return await api(`/tickets/${id}/cancel`, { method: 'PATCH', body: JSON.stringify({ reason }) });
+}
+
+export async function printThermal(id) {
+  return await api(`/tickets/${id}/print-thermal`, { method: 'POST' });
 }
 
 export async function createTicket(payload) {

@@ -483,6 +483,11 @@
     <div class="confirmation-modal-content glass-card">
       <h3 class="confirmation-modal-title">⚠️ Anular Ticket</h3>
       <div id="cancel-ticket-modal-body" style="margin:1rem 0"></div>
+      <div class="form-group" style="margin:0 0 1rem;">
+        <label for="cancel-ticket-reason">Motivo de la anulación (obligatorio)</label>
+        <textarea id="cancel-ticket-reason" rows="3" minlength="5" maxlength="500" required placeholder="Ej: cliente no llegó, error en la venta, duplicado..."></textarea>
+        <small id="cancel-ticket-reason-error" class="field-error hidden">El motivo debe tener al menos 5 caracteres.</small>
+      </div>
       <input type="hidden" id="cancel-ticket-id">
       <div class="confirmation-modal-actions">
         <button class="btn-danger" id="cancel-ticket-confirm" style="width:auto;padding:0.8rem 2rem;">Sí, anular</button>

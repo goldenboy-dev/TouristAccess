@@ -39,6 +39,11 @@ function validateEnv() {
     process.exit(1);
   }
 
+  if (process.env.THERMAL_PRINTING_ENABLED === 'true' && !process.env.PRINTER_IP) {
+    console.error('[FATAL] THERMAL_PRINTING_ENABLED=true requiere PRINTER_IP');
+    process.exit(1);
+  }
+
   validateProductionSecurity();
 }
 

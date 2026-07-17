@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTicketSchema, listTicketsQuerySchema } from '../src/validators/ticket.validator.js';
+import { createTicketSchema, listTicketsQuerySchema, cancelTicketSchema } from '../src/validators/ticket.validator.js';
 import {
   cashierHistoryQuerySchema,
   evolutionQuerySchema,
@@ -75,6 +75,28 @@ describe('createTicketSchema', () => {
 
   it('rejects an operation over 50 people', () => {
     const result = createTicketSchema.safeParse(validBody({ number_of_adults: 30, number_of_children: 30 }));
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('cancelTicketSchema', () => {
+  it('accepts a valid reason', () => {
+    const result = cancelTicketSchema.safeParse({ reason: 'Cliente pidió reembolso' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a missing reason', () => {
+    const result = cancelTicketSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a too-short reason', () => {
+    const result = cancelTicketSchema.safeParse({ reason: 'no' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects HTML in the reason', () => {
+    const result = cancelTicketSchema.safeParse({ reason: '<script>alert(1)</script>' });
     expect(result.success).toBe(false);
   });
 });
