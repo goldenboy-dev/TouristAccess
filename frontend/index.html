@@ -322,6 +322,35 @@
             </div>
           </div>
 
+          <!-- F. Alert History -->
+          <div class="fraud-subsection">
+            <div class="fraud-subsection-header-row">
+              <h4 class="fraud-subsection-title">Historial de Alertas</h4>
+              <div class="fraud-susp-filters">
+                <select id="alert-history-status" class="select-input" style="width:170px">
+                  <option value="">Todos los estados</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="REVISADA">Revisada</option>
+                  <option value="DESESTIMADA">Desestimada</option>
+                  <option value="ESCALADA">Escalada</option>
+                </select>
+                <button class="btn-secondary btn-sm" id="alert-history-filter-btn">Filtrar</button>
+              </div>
+            </div>
+            <div class="table-container glass-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th><th>Cajero</th><th>Nivel</th><th>Tipo</th><th>Mensaje</th><th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="alert-history-tbody">
+                  <tr><td colspan="6" class="table-empty">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
         <!-- END FRAUD PANEL -->
 
@@ -590,7 +619,9 @@
                 Filtrar
               </button>
               <button class="btn-secondary" id="caja-clear-filter">Reset</button>
-              <button class="btn-primary" id="caja-export-btn" style="width:auto">Exportar CSV</button>
+              <button class="btn-primary" id="caja-export-csv-btn" style="width:auto">CSV</button>
+              <button class="btn-secondary" id="caja-export-excel-btn" style="width:auto">Excel</button>
+              <button class="btn-secondary" id="caja-export-pdf-btn" style="width:auto">PDF</button>
             </div>
           </div>
         </div>

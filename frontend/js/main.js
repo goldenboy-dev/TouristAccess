@@ -5,7 +5,7 @@ import { getAudio } from './utils/notifications.js';
 
 // Features
 import { loadDashboard, stopFraudRefresh } from './features/dashboard.js';
-import { onFraudDateChange, toggleSuspiciousFilter } from './features/fraud-dashboard.js';
+import { onFraudDateChange, toggleSuspiciousFilter, loadAlertHistory } from './features/fraud-dashboard.js';
 import {
   loadTickets, initCreateTicketPage, handleCreateTicketSubmit,
   updatePriceSummary, renderCedulaFields, toggleToken, copyToken,
@@ -136,6 +136,9 @@ function setupEventListeners() {
   if (btnSuspAll) btnSuspAll.addEventListener('click', () => toggleSuspiciousFilter(false));
   if (btnSuspFlagged) btnSuspFlagged.addEventListener('click', () => toggleSuspiciousFilter(true));
 
+  const alertHistoryFilterBtn = document.getElementById('alert-history-filter-btn');
+  if (alertHistoryFilterBtn) alertHistoryFilterBtn.addEventListener('click', loadAlertHistory);
+
   // Validate setup
   document.getElementById('validate-form').addEventListener('submit', handleManualValidate);
   document.getElementById('validate-overlay-close').addEventListener('click', () => {
@@ -186,7 +189,9 @@ function setupEventListeners() {
     document.getElementById('caja-filter-cajero').value = '';
     loadCashReport();
   });
-  document.getElementById('caja-export-btn').addEventListener('click', handleExportCashReport);
+  document.getElementById('caja-export-csv-btn').addEventListener('click', () => handleExportCashReport('csv'));
+  document.getElementById('caja-export-excel-btn').addEventListener('click', () => handleExportCashReport('excel'));
+  document.getElementById('caja-export-pdf-btn').addEventListener('click', () => handleExportCashReport('pdf'));
 
   // Cancel-ticket modal buttons
   document.getElementById('cancel-ticket-confirm').addEventListener('click', confirmCancelTicket);

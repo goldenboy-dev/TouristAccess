@@ -5,6 +5,11 @@ import { showToast } from '../utils/notifications.js';
 
 let fraudRefreshInterval = null;
 
+const ALERT_STATUSES = ['PENDIENTE', 'REVISADA', 'DESESTIMADA', 'ESCALADA'];
+const ALERT_STATUS_LABELS = {
+  PENDIENTE: 'Pendiente', REVISADA: 'Revisada', DESESTIMADA: 'Desestimada', ESCALADA: 'Escalada',
+};
+
 // ─── Init ────────────────────────────────────────────────────
 export function initFraudPanel() {
   const panel = document.getElementById('fraud-panel');
@@ -71,6 +76,7 @@ async function loadFraudData() {
     renderCashBalance(summary);
     renderEvolutionChart(evolution);
     renderSuspiciousOps(suspicious);
+    loadAlertHistory();
   } catch (err) {
     console.error('Fraud panel error:', err);
     showToast('Error cargando panel anti-fraude', 'error');
@@ -95,8 +101,71 @@ function renderAlerts(data) {
       </div>
       <div class="alert-mensaje">${escapeHtml(a.mensaje)}</div>
       <div class="alert-detalle">${escapeHtml(a.detalle)}</div>
+      ${a.db_id ? `<div style="margin-top:.6rem">
+        <select class="select-input alert-status-select" data-alert-id="${a.db_id}" style="width:auto;font-size:.75rem;padding:.25rem .5rem">
+          ${ALERT_STATUSES.map(s => `<option value="${s}" ${a.status === s ? 'selected' : ''}>${ALERT_STATUS_LABELS[s]}</option>`).join('')}
+        </select>
+      </div>` : ''}
     </div>
   `).join('');
+
+  container.querySelectorAll('.alert-status-select').forEach((sel) => {
+    sel.addEventListener('change', () => handleAlertStatusChange(sel.dataset.alertId, sel.value));
+  });
+}
+
+// ─── F. Alert History ────────────────────────────────────────
+async function handleAlertStatusChange(alertId, status) {
+  try {
+    await api(`/dashboard/alerts-history/${alertId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    showToast('Estado actualizado', 'success');
+    loadAlertHistory();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+export async function loadAlertHistory() {
+  const tbody = document.getElementById('alert-history-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Cargando...</td></tr>';
+
+  try {
+    const status = document.getElementById('alert-history-status')?.value || '';
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    params.set('limit', '100');
+
+    const data = await api(`/dashboard/alerts-history?${params.toString()}`);
+
+    if (!data.entries || data.entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Sin alertas registradas</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.entries.map(e => `
+      <tr>
+        <td>${new Date(e.date).toLocaleDateString('es-ES')}</td>
+        <td>${escapeHtml(e.cajero_nombre || '—')}</td>
+        <td><span class="alert-badge alert-badge-${e.nivel.toLowerCase()}">${e.nivel}</span></td>
+        <td>${escapeHtml(e.tipo)}</td>
+        <td>${escapeHtml(e.mensaje)}</td>
+        <td>
+          <select class="select-input alert-status-select" data-alert-id="${e.id}" style="width:auto;font-size:.75rem;padding:.25rem .5rem">
+            ${ALERT_STATUSES.map(s => `<option value="${s}" ${e.status === s ? 'selected' : ''}>${ALERT_STATUS_LABELS[s]}</option>`).join('')}
+          </select>
+        </td>
+      </tr>`).join('');
+
+    tbody.querySelectorAll('.alert-status-select').forEach((sel) => {
+      sel.addEventListener('change', () => handleAlertStatusChange(sel.dataset.alertId, sel.value));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="table-empty">${err.message}</td></tr>`;
+  }
 }
 
 // ─── B. Risk Table ───────────────────────────────────────────

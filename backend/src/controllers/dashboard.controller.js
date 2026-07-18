@@ -3,6 +3,7 @@ const ticketService = require('../services/ticket.service');
 const settingsService = require('../services/settings.service');
 const cashReportService = require('../services/cash-report.service');
 const executiveReportService = require('../services/executive-report.service');
+const reportExportService = require('../services/report-export.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { startOfLocalDay, endOfLocalDay, startOfToday } = require('../utils/date');
 const { badRequest } = require('../utils/errors');
@@ -341,8 +342,27 @@ const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
 
 const exportCashReport = async (req, res, next) => {
   try {
-    const { date_from, date_to, cajero_id } = req.query; // validated by Zod
-    const { rows, grandTotal, grandTotalTickets } = await cashReportService.getCashReport({ date_from, date_to, cajero_id });
+    const { date_from, date_to, cajero_id, format } = req.query; // validated by Zod
+    const report = await cashReportService.getCashReport({ date_from, date_to, cajero_id });
+    const { rows, grandTotal, grandTotalTickets } = report;
+
+    const from = date_from || 'hoy';
+    const to = date_to || 'hoy';
+    const filenameBase = `cierre-caja-${from}_a_${to}`;
+
+    if (format === 'excel') {
+      const buffer = await reportExportService.buildCashReportExcel({ ...report, date_from: from, date_to: to });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.xlsx"`);
+      return res.status(200).send(buffer);
+    }
+
+    if (format === 'pdf') {
+      const buffer = await reportExportService.buildCashReportPdf({ ...report, date_from: from, date_to: to });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.pdf"`);
+      return res.status(200).send(buffer);
+    }
 
     const header = ['Cajero', 'Email', 'Total tickets', ...PAYMENT_METHODS, 'Total', 'Cancelados'];
     const lines = [header.map(csvCell).join(',')];
@@ -360,10 +380,8 @@ const exportCashReport = async (req, res, next) => {
 
     lines.push(['TOTAL', '', grandTotalTickets, ...PAYMENT_METHODS.map(() => ''), grandTotal, ''].map(csvCell).join(','));
 
-    const from = date_from || 'hoy';
-    const to = date_to || 'hoy';
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="cierre-caja-${from}_a_${to}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.csv"`);
     res.status(200).send(lines.join('\n'));
   } catch (error) {
     next(error);

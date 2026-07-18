@@ -8,6 +8,7 @@ const { z } = require('zod');
 const { optionalDate, optionalId, requiredId, boundedInt, optionalString, optionalEnum } = require('./query');
 const { ROLES } = require('../constants/user');
 const { TIME_RE } = require('../constants/settings');
+const { ALERT_STATUSES, ALERT_LEVELS } = require('../constants/fraud');
 
 const AUDIT_MAX_LIMIT = 200;
 
@@ -77,6 +78,10 @@ const cashReportQuerySchema = z.object({
   cajero_id: optionalId('cajero_id'),
 });
 
+const cashReportExportQuerySchema = cashReportQuerySchema.extend({
+  format: z.enum(['csv', 'excel', 'pdf'], { error: 'format debe ser csv, excel o pdf' }).default('csv'),
+});
+
 const statsQuerySchema = z.object({
   date_from: optionalDate('date_from'),
   date_to:   optionalDate('date_to'),
@@ -105,7 +110,22 @@ const fraudSummaryQuerySchema = z.object({
 
 const alertsQuerySchema = z.object({
   date:  optionalDate('date'),
-  nivel: optionalEnum(['CRITICO', 'AVISO'], 'nivel debe ser CRITICO o AVISO'),
+  nivel: optionalEnum(ALERT_LEVELS, 'nivel debe ser CRITICO o AVISO'),
+});
+
+const alertsHistoryQuerySchema = z.object({
+  status:    optionalEnum(ALERT_STATUSES, `status debe ser uno de: ${ALERT_STATUSES.join(', ')}`),
+  nivel:     optionalEnum(ALERT_LEVELS, 'nivel debe ser CRITICO o AVISO'),
+  cajero_id: optionalId('cajero_id'),
+  date_from: optionalDate('date_from'),
+  date_to:   optionalDate('date_to'),
+  page:  boundedInt({ min: 1, max: 100000, fallback: 1,  label: 'page' }),
+  limit: boundedInt({ min: 1, max: 200,    fallback: 50, label: 'limit' }),
+});
+
+const updateAlertStatusSchema = z.object({
+  status: z.enum(ALERT_STATUSES, { error: `status debe ser uno de: ${ALERT_STATUSES.join(', ')}` }),
+  note: z.string().trim().max(500, 'La nota no puede superar 500 caracteres').optional(),
 });
 
 const evolutionQuerySchema = z.object({
@@ -132,11 +152,14 @@ module.exports = {
   updatePricingSchema,
   updateOperatingSettingsSchema,
   cashReportQuerySchema,
+  cashReportExportQuerySchema,
   statsQuerySchema,
   executiveSummaryQuerySchema,
   auditLogQuerySchema,
   fraudSummaryQuerySchema,
   alertsQuerySchema,
+  alertsHistoryQuerySchema,
+  updateAlertStatusSchema,
   evolutionQuerySchema,
   suspiciousOperationsQuerySchema,
   cashierHistoryQuerySchema,

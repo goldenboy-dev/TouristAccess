@@ -7,6 +7,8 @@ const {
   toLocalDateStr,
   FREE_PCT_LIMIT,
 } = require('../services/fraud.service');
+const fraudAlertService = require('../services/fraud-alert.service');
+const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { notFound } = require('../utils/errors');
 
 // ─── GET /api/dashboard/fraud-summary ────────────────────────
@@ -20,11 +22,60 @@ const getFraudSummary = async (req, res, next) => {
 };
 
 // ─── GET /api/dashboard/alerts ───────────────────────────────
+// Persists the day's derived alerts (upsert, keyed by the same synthetic id
+// deriveAlerts already builds) so a status set from the history panel shows
+// up here too, and survives the next 60s auto-refresh.
 const getAlerts = async (req, res, next) => {
   try {
     const { date, nivel } = req.query;
     const fraudData = await calculateCashierFraudMetrics(date);
-    res.status(200).json(deriveAlerts(fraudData, nivel || null));
+
+    const allAlerts = deriveAlerts(fraudData, null).alerts;
+    const persisted = await fraudAlertService.persistAlerts(fraudData.date, allAlerts);
+    const persistedByKey = new Map(persisted.map((p) => [p.alert_key, p]));
+
+    const result = deriveAlerts(fraudData, nivel || null);
+    result.alerts = result.alerts.map((a) => {
+      const p = persistedByKey.get(a.id);
+      return p ? { ...a, db_id: p.id, status: p.status } : a;
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── GET /api/dashboard/alerts-history ───────────────────────
+const getAlertsHistory = async (req, res, next) => {
+  try {
+    const { status, nivel, cajero_id, date_from, date_to, page, limit } = req.query;
+    const result = await fraudAlertService.listAlertHistory({ status, nivel, cajero_id, date_from, date_to, page, limit });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── PATCH /api/dashboard/alerts-history/:id/status ──────────
+const updateAlertStatus = async (req, res, next) => {
+  try {
+    const { status, note } = req.body; // validated by Zod
+    const { previous, updated } = await fraudAlertService.updateAlertStatus({
+      id: parseInt(req.params.id),
+      status,
+      note,
+      reviewedById: req.user.id,
+    });
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.FRAUD_ALERT_STATUS_UPDATED,
+      resource_type: 'FraudAlert',
+      resource_id: updated.id,
+      metadata: { alertKey: previous.alert_key, previousStatus: previous.status, newStatus: status, note: note || undefined },
+    });
+
+    res.status(200).json({ message: 'Estado actualizado correctamente', alert: updated });
   } catch (error) {
     next(error);
   }
@@ -172,4 +223,7 @@ const getCashierHistory = async (req, res, next) => {
   }
 };
 
-module.exports = { getFraudSummary, getAlerts, getGratuitosEvolution, getSuspiciousOperations, getCashierHistory };
+module.exports = {
+  getFraudSummary, getAlerts, getAlertsHistory, updateAlertStatus,
+  getGratuitosEvolution, getSuspiciousOperations, getCashierHistory,
+};

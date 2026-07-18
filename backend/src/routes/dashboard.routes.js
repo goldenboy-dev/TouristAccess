@@ -12,11 +12,14 @@ const {
   updatePricingSchema,
   updateOperatingSettingsSchema,
   cashReportQuerySchema,
+  cashReportExportQuerySchema,
   statsQuerySchema,
   executiveSummaryQuerySchema,
   auditLogQuerySchema,
   fraudSummaryQuerySchema,
   alertsQuerySchema,
+  alertsHistoryQuerySchema,
+  updateAlertStatusSchema,
   evolutionQuerySchema,
   suspiciousOperationsQuerySchema,
   cashierHistoryQuerySchema,
@@ -47,11 +50,13 @@ router.get('/settings', authenticateToken, authorizeRoles('ADMIN'), dashboardCon
 router.patch('/settings', authenticateToken, authorizeRoles('ADMIN'), validate(updateOperatingSettingsSchema), dashboardController.updateOperatingSettings);
 router.get('/audit-log', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(auditLogQuerySchema), dashboardController.getAuditLog);
 router.get('/cash-report', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(cashReportQuerySchema), dashboardController.getCashReport);
-router.get('/cash-report/export', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(cashReportQuerySchema), dashboardController.exportCashReport);
+router.get('/cash-report/export', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(cashReportExportQuerySchema), dashboardController.exportCashReport);
 
 // ── Anti-fraud panel routes (ADMIN only) ────────────────
 router.get('/fraud-summary',          authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(fraudSummaryQuerySchema), fraudController.getFraudSummary);
 router.get('/alerts',                 authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(alertsQuerySchema), fraudController.getAlerts);
+router.get('/alerts-history',         authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(alertsHistoryQuerySchema), fraudController.getAlertsHistory);
+router.patch('/alerts-history/:id/status', authenticateToken, authorizeRoles('ADMIN'), validate(updateAlertStatusSchema), fraudController.updateAlertStatus);
 router.get('/gratuitos-evolution',    authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(evolutionQuerySchema), fraudController.getGratuitosEvolution);
 router.get('/suspicious-operations',  authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(suspiciousOperationsQuerySchema), fraudController.getSuspiciousOperations);
 router.get('/cashier-history',        authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(cashierHistoryQuerySchema), fraudController.getCashierHistory);

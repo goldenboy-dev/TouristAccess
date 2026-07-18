@@ -31,6 +31,8 @@ model User {
   refreshTokens    RefreshToken[]
   auditLogs        AuditLog[]
   updatedSettings  AppSetting[]
+  fraudAlerts      FraudAlert[]       @relation("FraudAlertCajero")
+  reviewedAlerts   FraudAlert[]       @relation("FraudAlertReviewedBy")
 }
 
 // Generic key-value store for admin-editable config (pricing today; horarios
@@ -145,6 +147,35 @@ model GroupSummary {
   @@index([operation_code])
   @@index([cajero_id])
   @@index([visit_date])
+}
+
+// Persisted version of the alerts fraud.service.js derives on the fly for a
+// given date. `alert_key` is the same synthetic id deriveAlerts() already
+// builds (`alert-${cajero_id}-${suffix}`, unique per date+cajero+tipo) — it's
+// what lets repeated GET /alerts calls (auto-refreshed every 60s) upsert the
+// same row instead of duplicating it, while an admin's status change survives
+// those refreshes untouched.
+model FraudAlert {
+  id              Int       @id @default(autoincrement())
+  alert_key       String    @unique
+  date            DateTime  // local day this alert was computed for (local midnight)
+  cajero_id       Int
+  cajero          User      @relation("FraudAlertCajero", fields: [cajero_id], references: [id])
+  nivel           String    // CRITICO | AVISO
+  tipo            String    // BRECHA_INGRESOS | RATIO_GRATUITOS_CRITICO | RATIO_GRATUITOS_ELEVADO | OPERACIONES_SOSPECHOSAS
+  mensaje         String
+  detalle         String
+  status          String    @default("PENDIENTE") // PENDIENTE | REVISADA | DESESTIMADA | ESCALADA
+  reviewed_by_id  Int?
+  reviewedBy      User?     @relation("FraudAlertReviewedBy", fields: [reviewed_by_id], references: [id], onDelete: SetNull)
+  reviewed_at     DateTime?
+  review_note     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([date])
+  @@index([cajero_id])
+  @@index([status])
 }
 
 model Scan {

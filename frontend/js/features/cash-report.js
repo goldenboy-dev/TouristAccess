@@ -63,13 +63,16 @@ export async function loadCashReport() {
   }
 }
 
+const EXPORT_FILENAMES = { csv: 'cierre-caja.csv', excel: 'cierre-caja.xlsx', pdf: 'cierre-caja.pdf' };
+
 // A file download needs the Authorization header, so it cannot be a plain
 // <a href> — the api() wrapper assumes a JSON body, so this does its own
 // fetch and turns the response into a Blob download.
-export async function handleExportCashReport() {
+export async function handleExportCashReport(format = 'csv') {
   try {
-    const qs = buildQuery();
-    const res = await fetch(`${API_URL}/dashboard/cash-report/export${qs ? '?' + qs : ''}`, {
+    const params = new URLSearchParams(buildQuery());
+    params.set('format', format);
+    const res = await fetch(`${API_URL}/dashboard/cash-report/export?${params.toString()}`, {
       headers: { Authorization: `Bearer ${store.authToken}` },
     });
     if (!res.ok) {
@@ -80,7 +83,7 @@ export async function handleExportCashReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'cierre-caja.csv';
+    a.download = EXPORT_FILENAMES[format] || EXPORT_FILENAMES.csv;
     document.body.appendChild(a);
     a.click();
     a.remove();

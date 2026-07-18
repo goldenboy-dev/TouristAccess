@@ -32,6 +32,7 @@ const AUDIT_EVENTS = {
   USER_ACTIVE_CHANGED: 'user.active_changed',
   PRICING_UPDATED: 'pricing.updated',
   SETTINGS_UPDATED: 'settings.updated',
+  FRAUD_ALERT_STATUS_UPDATED: 'fraud_alert.status_updated',
 };
 
 /**
