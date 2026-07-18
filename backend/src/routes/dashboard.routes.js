@@ -13,6 +13,7 @@ const {
   updateOperatingSettingsSchema,
   cashReportQuerySchema,
   statsQuerySchema,
+  executiveSummaryQuerySchema,
   auditLogQuerySchema,
   fraudSummaryQuerySchema,
   alertsQuerySchema,
@@ -36,6 +37,7 @@ const dashboardLimiter = rateLimit({
 
 // ── Existing dashboard routes ────────────────
 router.get('/stats', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), dashboardLimiter, validateQuery(statsQuerySchema), dashboardController.getStats);
+router.get('/executive-summary', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, validateQuery(executiveSummaryQuerySchema), dashboardController.getExecutiveSummary);
 router.get('/users', authenticateToken, authorizeRoles('ADMIN'), dashboardLimiter, dashboardController.getUsers);
 router.patch('/users/:id/name', authenticateToken, authorizeRoles('ADMIN'), validate(updateUserNameSchema), dashboardController.updateUserName);
 router.patch('/users/:id/role', authenticateToken, authorizeRoles('ADMIN'), validate(updateUserRoleSchema), dashboardController.updateUserRole);

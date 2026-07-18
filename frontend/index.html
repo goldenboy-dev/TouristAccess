@@ -208,6 +208,25 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════
+             RESUMEN EJECUTIVO (ADMIN ONLY)
+             ═══════════════════════════════════════════════════ -->
+        <div id="executive-panel" class="hidden">
+          <div class="section-header" style="margin-top:2rem;">
+            <h3>📈 Resumen Ejecutivo</h3>
+          </div>
+          <div class="stats-grid" id="executive-stats-grid">
+            <div class="stat-card glass-card"><div class="stat-icon stat-icon-green"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-info"><span class="stat-value" id="exec-today-revenue">₲0</span><span class="stat-label" id="exec-today-label">Hoy</span></div></div>
+            <div class="stat-card glass-card"><div class="stat-icon stat-icon-cyan"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-info"><span class="stat-value" id="exec-week-revenue">₲0</span><span class="stat-label" id="exec-week-label">Últimos 7 días</span></div></div>
+            <div class="stat-card glass-card"><div class="stat-icon stat-icon-purple"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="stat-info"><span class="stat-value" id="exec-month-revenue">₲0</span><span class="stat-label" id="exec-month-label">Últimos 30 días</span></div></div>
+          </div>
+          <div class="glass-card" style="padding:1.25rem;margin-top:1rem;">
+            <h4 class="fraud-subsection-title">Tendencia de Ingresos</h4>
+            <div id="exec-revenue-chart"></div>
+          </div>
+        </div>
+        <!-- END RESUMEN EJECUTIVO -->
+
+        <!-- ═══════════════════════════════════════════════════
              PANEL ANTI-FRAUDE (ADMIN ONLY)
              ═══════════════════════════════════════════════════ -->
         <div id="fraud-panel" class="fraud-panel hidden">

@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const ticketService = require('../services/ticket.service');
 const settingsService = require('../services/settings.service');
 const cashReportService = require('../services/cash-report.service');
+const executiveReportService = require('../services/executive-report.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { startOfLocalDay, endOfLocalDay, startOfToday } = require('../utils/date');
 const { badRequest } = require('../utils/errors');
@@ -85,6 +86,16 @@ const getStats = async (req, res, next) => {
         scannedAt: s.scannedAt,
       })),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── EXECUTIVE SUMMARY (ADMIN only) ──────────────────────────
+const getExecutiveSummary = async (req, res, next) => {
+  try {
+    const { days } = req.query; // validated by Zod
+    res.status(200).json(await executiveReportService.getExecutiveSummary({ days }));
   } catch (error) {
     next(error);
   }
@@ -360,7 +371,7 @@ const exportCashReport = async (req, res, next) => {
 };
 
 module.exports = {
-  getStats, getUsers, updateUserName, updateUserRole, updateUserActive,
+  getStats, getExecutiveSummary, getUsers, updateUserName, updateUserRole, updateUserActive,
   updatePricing, getOperatingSettings, updateOperatingSettings,
   getAuditLog, getCashReport, exportCashReport,
 };

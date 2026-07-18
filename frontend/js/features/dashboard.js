@@ -3,6 +3,7 @@ import { store } from '../store.js';
 import { getPaymentIcon, escapeHtml, getVisitorTypeName } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 import { initFraudPanel, stopFraudRefresh } from './fraud-dashboard.js';
+import { loadExecutiveSummary } from './executive-dashboard.js';
 
 export async function loadDashboard() {
   const from = document.getElementById('dash-date-from').value;
@@ -47,7 +48,8 @@ export async function loadDashboard() {
     showToast(err.message, 'error');
   }
 
-  // Init fraud panel (only for ADMIN, handled internally)
+  // Init executive summary + fraud panel (both ADMIN-only, handled internally)
+  loadExecutiveSummary();
   initFraudPanel();
 }
 

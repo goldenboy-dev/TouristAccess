@@ -82,6 +82,12 @@ const statsQuerySchema = z.object({
   date_to:   optionalDate('date_to'),
 });
 
+const executiveSummaryQuerySchema = z.object({
+  // Cuántos días mostrar en el gráfico de tendencia; los totales de
+  // día/semana/mes son siempre sobre los últimos 30 días, sin importar esto.
+  days: boundedInt({ min: 7, max: 30, fallback: 14, label: 'days' }),
+});
+
 const auditLogQuerySchema = z.object({
   event:         optionalString(80),
   actor_id:      optionalId('actor_id'),
@@ -127,6 +133,7 @@ module.exports = {
   updateOperatingSettingsSchema,
   cashReportQuerySchema,
   statsQuerySchema,
+  executiveSummaryQuerySchema,
   auditLogQuerySchema,
   fraudSummaryQuerySchema,
   alertsQuerySchema,
