@@ -214,3 +214,39 @@ export async function handleSavePricing(e) {
     msgEl.classList.remove('hidden');
   }
 }
+
+// ─── Operating settings: horarios + aforo (ADMIN only) ────────
+export async function loadOperatingSettings() {
+  try {
+    const data = await api('/dashboard/settings');
+    document.getElementById('settings-hours-start').value = data.operating_hours_start || '';
+    document.getElementById('settings-hours-end').value = data.operating_hours_end || '';
+    document.getElementById('settings-max-capacity').value = data.max_daily_capacity ?? '';
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+export async function handleSaveOperatingSettings(e) {
+  e.preventDefault();
+  const msgEl = document.getElementById('settings-msg');
+  msgEl.classList.add('hidden');
+
+  try {
+    await api('/dashboard/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        // Empty string means "clear this field" — the backend turns it into
+        // null (unrestricted), not zero.
+        operating_hours_start: document.getElementById('settings-hours-start').value,
+        operating_hours_end: document.getElementById('settings-hours-end').value,
+        max_daily_capacity: document.getElementById('settings-max-capacity').value,
+      }),
+    });
+    showToast('Configuración actualizada', 'success');
+  } catch (err) {
+    msgEl.textContent = err.message;
+    msgEl.className = 'error-msg';
+    msgEl.classList.remove('hidden');
+  }
+}

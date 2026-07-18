@@ -31,6 +31,7 @@ const AUDIT_EVENTS = {
   USER_ROLE_UPDATED: 'user.role_updated',
   USER_ACTIVE_CHANGED: 'user.active_changed',
   PRICING_UPDATED: 'pricing.updated',
+  SETTINGS_UPDATED: 'settings.updated',
 };
 
 /**

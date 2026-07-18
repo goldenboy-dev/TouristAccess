@@ -7,6 +7,7 @@ import {
   auditLogQuerySchema,
   suspiciousOperationsQuerySchema,
   updateUserNameSchema,
+  updateOperatingSettingsSchema,
 } from '../src/validators/dashboard.validator.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -208,5 +209,63 @@ describe('updateUserNameSchema', () => {
 
   it('rejects HTML', () => {
     expect(updateUserNameSchema.safeParse({ name: '<b>Ana</b>' }).success).toBe(false);
+  });
+});
+
+describe('updateOperatingSettingsSchema', () => {
+  it('accepts a valid hours pair + capacity', () => {
+    const result = updateOperatingSettingsSchema.safeParse({
+      operating_hours_start: '07:00',
+      operating_hours_end: '20:00',
+      max_daily_capacity: 500,
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.max_daily_capacity).toBe(500);
+  });
+
+  it('coerces a string capacity from an HTML form', () => {
+    const result = updateOperatingSettingsSchema.safeParse({ max_daily_capacity: '500' });
+    expect(result.success).toBe(true);
+    expect(result.data.max_daily_capacity).toBe(500);
+  });
+
+  it('treats an empty string as "clear this field", not zero', () => {
+    const result = updateOperatingSettingsSchema.safeParse({
+      operating_hours_start: '',
+      operating_hours_end: '',
+      max_daily_capacity: '',
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.operating_hours_start).toBeNull();
+    expect(result.data.max_daily_capacity).toBeNull();
+  });
+
+  it('rejects an hours pair sent one-sided', () => {
+    expect(updateOperatingSettingsSchema.safeParse({ operating_hours_start: '07:00' }).success).toBe(false);
+  });
+
+  it('rejects hours where start is not before end', () => {
+    const result = updateOperatingSettingsSchema.safeParse({
+      operating_hours_start: '20:00',
+      operating_hours_end: '07:00',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a malformed time string', () => {
+    const result = updateOperatingSettingsSchema.safeParse({
+      operating_hours_start: '7:00',
+      operating_hours_end: '20:00',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a zero or negative capacity', () => {
+    expect(updateOperatingSettingsSchema.safeParse({ max_daily_capacity: 0 }).success).toBe(false);
+    expect(updateOperatingSettingsSchema.safeParse({ max_daily_capacity: -5 }).success).toBe(false);
+  });
+
+  it('accepts an empty body (nothing to update yet — the service rejects that separately)', () => {
+    expect(updateOperatingSettingsSchema.safeParse({}).success).toBe(true);
   });
 });

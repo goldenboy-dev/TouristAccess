@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mockModule, loadModule } from './helpers/cjs-mock.js';
 
 // In-memory stand-in for the Prisma client. Every test wires only the calls it
@@ -11,7 +11,11 @@ const prismaMock = {
   groupSummary: { create: vi.fn(), findUnique: vi.fn() },
   // No row by default: getPricing() falls back to the ADULT_PRICE env var
   // (set to 10000 in vitest.config.mjs) — same value PRICING.ADULT used to be.
-  appSetting: { findUnique: vi.fn(), upsert: vi.fn() },
+  // findMany defaults to [] — settings.service.getOperatingSettings() then
+  // reports "unconfigured", so createTicketGroup/validateTicketByToken (which
+  // now call it unconditionally) stay unrestricted for every test that
+  // doesn't care about hours/aforo.
+  appSetting: { findUnique: vi.fn(), findMany: vi.fn().mockResolvedValue([]), upsert: vi.fn(), deleteMany: vi.fn() },
   $transaction: vi.fn(),
 };
 
@@ -41,6 +45,11 @@ const activeTicket = (overrides = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks() clears call history but NOT a queued mockResolvedValue,
+  // so a test that configures hours/aforo would otherwise leak its override
+  // into every test that runs after it. Re-arm the "unconfigured" default
+  // every time so operating-hours tests are isolated regardless of order.
+  prismaMock.appSetting.findMany.mockResolvedValue([]);
 });
 
 // ─── Pricing / payment flow ──────────────────────────────────
@@ -440,6 +449,117 @@ describe('validateTicketByToken', () => {
 
     await expect(ticketService.validateTicketByToken({ token: 'a'.repeat(64), guardId }))
       .rejects.toThrow('connection reset');
+  });
+});
+
+// ─── Operating hours (Fase 5: horarios de operación) ─────────
+describe('operating hours enforcement (validateTicketByToken)', () => {
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('rejects a scan outside the configured operating hours, without even looking up the token', async () => {
+    prismaMock.appSetting.findMany.mockResolvedValue([
+      { key: 'operating_hours_start', value: '07:00' },
+      { key: 'operating_hours_end', value: '20:00' },
+    ]);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 17, 21, 0, 0)); // 21:00 local, after closing
+
+    const result = await ticketService.validateTicketByToken({ token: 'a'.repeat(64), guardId: 8 });
+
+    expect(result.outcome).toBe('rejected');
+    expect(result.audit.reason).toBe('outside_operating_hours');
+    expect(prismaMock.ticket.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('admits a scan inside the configured operating hours', async () => {
+    prismaMock.appSetting.findMany.mockResolvedValue([
+      { key: 'operating_hours_start', value: '07:00' },
+      { key: 'operating_hours_end', value: '20:00' },
+    ]);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 17, 12, 0, 0)); // 12:00 local
+    prismaMock.ticket.findUnique.mockResolvedValue(activeTicket());
+    prismaMock.$transaction.mockImplementation(async (fn) => fn({
+      ticket: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      scan: { create: vi.fn().mockResolvedValue({}) },
+    }));
+
+    const result = await ticketService.validateTicketByToken({ token: 'a'.repeat(64), guardId: 8 });
+
+    expect(result.outcome).toBe('valid');
+  });
+
+  it('stays unrestricted when nobody has configured operating hours (default findMany: [])', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(activeTicket());
+    prismaMock.$transaction.mockImplementation(async (fn) => fn({
+      ticket: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      scan: { create: vi.fn().mockResolvedValue({}) },
+    }));
+
+    const result = await ticketService.validateTicketByToken({ token: 'a'.repeat(64), guardId: 8 });
+
+    expect(result.outcome).toBe('valid');
+  });
+});
+
+// ─── Aforo máximo diario (Fase 5) ─────────────────────────────
+describe('aforo enforcement (createTicketGroup)', () => {
+  it('refuses a sale that would push the day over max_daily_capacity', async () => {
+    prismaMock.appSetting.findMany.mockResolvedValue([{ key: 'max_daily_capacity', value: '10' }]);
+    prismaMock.ticket.count.mockResolvedValue(9);
+    prismaMock.user.findUnique.mockResolvedValue({ email: 'ana@yaguaron.py' });
+
+    await expect(ticketService.createTicketGroup({
+      cashierId: 3,
+      input: {
+        visit_date: new Date().toISOString().slice(0, 10),
+        payment_method: 'CASH',
+        number_of_adults: 2, // 9 already sold + 2 > 10
+      },
+    })).rejects.toThrow(/Aforo máximo/);
+
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('allows a sale that fits exactly at the remaining capacity', async () => {
+    prismaMock.appSetting.findMany.mockResolvedValue([{ key: 'max_daily_capacity', value: '10' }]);
+    prismaMock.ticket.count.mockResolvedValue(9);
+    prismaMock.user.findUnique.mockResolvedValue({ email: 'ana@yaguaron.py' });
+    prismaMock.$transaction.mockImplementation(async (fn) => fn({
+      groupSummary: { create: vi.fn().mockResolvedValue({ id: 5, operation_code: 'abc12345' }) },
+      ticket: { create: vi.fn().mockImplementation(({ data }) => Promise.resolve({ id: 1, createdAt: new Date(), ...data })) },
+    }));
+
+    const result = await ticketService.createTicketGroup({
+      cashierId: 3,
+      input: {
+        visit_date: new Date().toISOString().slice(0, 10),
+        payment_method: 'CASH',
+        number_of_adults: 1, // 9 + 1 === 10, exactly at cap
+      },
+    });
+
+    expect(result.qty).toBe(1);
+  });
+
+  it('stays unrestricted when nobody has configured a cap (default findMany: [])', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ email: 'ana@yaguaron.py' });
+    prismaMock.$transaction.mockImplementation(async (fn) => fn({
+      groupSummary: { create: vi.fn().mockResolvedValue({ id: 5, operation_code: 'abc12345' }) },
+      ticket: { create: vi.fn().mockImplementation(({ data }) => Promise.resolve({ id: 1, createdAt: new Date(), ...data })) },
+    }));
+
+    const result = await ticketService.createTicketGroup({
+      cashierId: 3,
+      input: {
+        visit_date: new Date().toISOString().slice(0, 10),
+        payment_method: 'CASH',
+        number_of_adults: 5,
+      },
+    });
+
+    expect(result.qty).toBe(5);
+    expect(prismaMock.ticket.count).not.toHaveBeenCalled();
   });
 });
 

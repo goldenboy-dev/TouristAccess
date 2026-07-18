@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const ticketService = require('../services/ticket.service');
+const settingsService = require('../services/settings.service');
 const cashReportService = require('../services/cash-report.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { startOfLocalDay, endOfLocalDay, startOfToday } = require('../utils/date');
@@ -241,6 +242,34 @@ const updatePricing = async (req, res, next) => {
   }
 };
 
+// ─── OPERATING SETTINGS: horarios + aforo (ADMIN only) ───────
+const getOperatingSettings = async (_req, res, next) => {
+  try {
+    res.status(200).json(await settingsService.getOperatingSettings());
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateOperatingSettings = async (req, res, next) => {
+  try {
+    const previous = await settingsService.getOperatingSettings();
+    await settingsService.updateOperatingSettings(req.body, req.user.id); // validated by Zod
+
+    const updated = await settingsService.getOperatingSettings();
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.SETTINGS_UPDATED,
+      resource_type: 'AppSetting',
+      resource_id: 'operating_settings',
+      metadata: { previous, updated },
+    });
+
+    res.status(200).json({ message: 'Configuración actualizada correctamente', settings: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── AUDIT LOG (ADMIN only) ─────────────────────────────────
 // A persisted trail is only useful if it can be read back. Filterable by
 // event, actor, outcome and date range; paginated.
@@ -332,5 +361,6 @@ const exportCashReport = async (req, res, next) => {
 
 module.exports = {
   getStats, getUsers, updateUserName, updateUserRole, updateUserActive,
-  updatePricing, getAuditLog, getCashReport, exportCashReport,
+  updatePricing, getOperatingSettings, updateOperatingSettings,
+  getAuditLog, getCashReport, exportCashReport,
 };

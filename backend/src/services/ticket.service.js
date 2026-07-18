@@ -12,6 +12,7 @@ const {
   toLocalDateStr,
 } = require('../utils/date');
 const { renderTicketQR, renderTicketHTML, persistTicketHTML } = require('./ticket-render.service');
+const settingsService = require('./settings.service');
 const { PAYMENT_METHODS, MAX_PERSONS, MAX_VISIT_DATE_DRIFT_DAYS } = require('../constants/ticket');
 
 // ─── Server-side pricing (NEVER trust frontend) ──────────────
@@ -145,6 +146,20 @@ async function createTicketGroup({ input, cashierId }) {
   // "today", and west of Greenwich a UTC-parsed date is the previous day.
   const visitDate = parseLocalDate(visit_date);
 
+  // Aforo: unconfigured (max_daily_capacity === null) means unrestricted.
+  // Checked against real sales for the day (ACTIVE+USED), so a cancellation
+  // frees up its spot — same accounting the cash report and fraud panel use.
+  const operatingSettings = await settingsService.getOperatingSettings();
+  if (operatingSettings.max_daily_capacity !== null) {
+    const alreadySold = await settingsService.getSoldCountForDate(visitDate);
+    if (alreadySold + qty > operatingSettings.max_daily_capacity) {
+      const remaining = Math.max(operatingSettings.max_daily_capacity - alreadySold, 0);
+      throw badRequest(
+        `Aforo máximo alcanzado para esa fecha (quedan ${remaining} de ${operatingSettings.max_daily_capacity})`,
+      );
+    }
+  }
+
   // Atomic: a group summary without its tickets (or vice versa) would corrupt
   // every fraud metric derived from them.
   const { groupSummary, tickets } = await prisma.$transaction(async (tx) => {
@@ -209,6 +224,25 @@ async function createTicketGroup({ input, cashierId }) {
 // Every rejection carries `audit` because a guard racking up rejections is
 // itself a signal, and gate disputes need a record of what was scanned.
 async function validateTicketByToken({ token, freeConfirmed, guardId }) {
+  // Checked before touching the token at all: outside operating hours, no
+  // scan should succeed regardless of whether the ticket itself is valid.
+  const operatingSettings = await settingsService.getOperatingSettings();
+  if (!settingsService.isWithinOperatingHours(operatingSettings)) {
+    return {
+      outcome: 'rejected',
+      ticket: null,
+      audit: {
+        reason: 'outside_operating_hours',
+        operating_hours_start: operatingSettings.operating_hours_start,
+        operating_hours_end: operatingSettings.operating_hours_end,
+      },
+      response: {
+        status: 'invalid',
+        message: `Fuera del horario de operación (${operatingSettings.operating_hours_start}–${operatingSettings.operating_hours_end})`,
+      },
+    };
+  }
+
   const cleanToken = token.trim();
   const ticket = await prisma.ticket.findUnique({
     where: { token: cleanToken },

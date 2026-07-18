@@ -7,6 +7,7 @@
 const { z } = require('zod');
 const { optionalDate, optionalId, requiredId, boundedInt, optionalString, optionalEnum } = require('./query');
 const { ROLES } = require('../constants/user');
+const { TIME_RE } = require('../constants/settings');
 
 const AUDIT_MAX_LIMIT = 200;
 
@@ -33,6 +34,41 @@ const updatePricingSchema = z.object({
     .int('adult_price debe ser un entero')
     .positive('adult_price debe ser mayor a 0')
     .max(10_000_000, 'adult_price no puede superar 10.000.000'),
+});
+
+// '' means "clear this field" (frontend leaves the input empty), distinct
+// from "not sent at all" — the union keeps a real null from being coerced
+// into 0 by z.coerce.number().
+const emptyToNull = (v) => (v === '' ? null : v);
+
+const updateOperatingSettingsSchema = z.object({
+  operating_hours_start: z.preprocess(emptyToNull, z.union([
+    z.null(),
+    z.string().regex(TIME_RE, 'operating_hours_start debe tener formato HH:MM'),
+  ])).optional(),
+  operating_hours_end: z.preprocess(emptyToNull, z.union([
+    z.null(),
+    z.string().regex(TIME_RE, 'operating_hours_end debe tener formato HH:MM'),
+  ])).optional(),
+  max_daily_capacity: z.preprocess(emptyToNull, z.union([
+    z.null(),
+    z.coerce.number().int('max_daily_capacity debe ser un entero').positive('max_daily_capacity debe ser mayor a 0').max(100_000, 'max_daily_capacity no puede superar 100.000'),
+  ])).optional(),
+}).refine((d) => (d.operating_hours_start === undefined) === (d.operating_hours_end === undefined), {
+  message: 'operating_hours_start y operating_hours_end deben enviarse juntos',
+  path: ['operating_hours_end'],
+}).refine((d) => {
+  if (d.operating_hours_start === undefined) return true;
+  return (d.operating_hours_start === null) === (d.operating_hours_end === null);
+}, {
+  message: 'operating_hours_start y operating_hours_end deben enviarse juntos (ambos con hora o ambos vacíos)',
+  path: ['operating_hours_end'],
+}).refine((d) => {
+  if (!d.operating_hours_start || !d.operating_hours_end) return true;
+  return d.operating_hours_start < d.operating_hours_end;
+}, {
+  message: 'operating_hours_start debe ser anterior a operating_hours_end',
+  path: ['operating_hours_end'],
 });
 
 const cashReportQuerySchema = z.object({
@@ -88,6 +124,7 @@ module.exports = {
   updateUserRoleSchema,
   updateUserActiveSchema,
   updatePricingSchema,
+  updateOperatingSettingsSchema,
   cashReportQuerySchema,
   statsQuerySchema,
   auditLogQuerySchema,

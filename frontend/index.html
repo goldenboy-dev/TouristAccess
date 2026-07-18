@@ -491,6 +491,32 @@
           <p id="pricing-msg" class="hidden"></p>
           <small>Menores de 12 años y residentes locales siguen sin cargo (es la base del panel anti-fraude).</small>
         </div>
+
+        <div class="form-container glass-card" style="margin-bottom:1.5rem">
+          <h3 style="margin-bottom:1rem">Horario de operación y aforo máximo</h3>
+          <form id="settings-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="settings-hours-start">Hora de apertura</label>
+                <input type="time" id="settings-hours-start">
+              </div>
+              <div class="form-group">
+                <label for="settings-hours-end">Hora de cierre</label>
+                <input type="time" id="settings-hours-end">
+              </div>
+              <div class="form-group">
+                <label for="settings-max-capacity">Aforo máximo diario</label>
+                <input type="number" id="settings-max-capacity" min="1" max="100000" placeholder="Sin límite">
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;width:100%">
+                <button type="submit" class="btn-primary" style="width:auto">Guardar configuración</button>
+              </div>
+            </div>
+          </form>
+          <p id="settings-msg" class="hidden"></p>
+          <small>Dejá ambas horas vacías para no restringir el escaneo por horario, o el aforo vacío para no limitar las ventas por día. Un guardia que escanee fuera de horario ve el acceso rechazado; una venta que supere el aforo del día se rechaza al confirmar.</small>
+        </div>
+
         <div id="register-form-container" class="form-container glass-card hidden" style="margin-bottom:1.5rem">
           <h3 style="margin-bottom:1rem">Registrar Nuevo Usuario</h3>
           <form id="register-form">

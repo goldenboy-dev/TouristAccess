@@ -18,6 +18,7 @@ import {
   handleEditRole, saveEditRole, cancelEditRole,
   handleToggleActive, confirmToggleActive, cancelToggleActive,
   loadPricing, handleSavePricing,
+  loadOperatingSettings, handleSaveOperatingSettings,
 } from './features/users.js';
 import { loadCashReport, handleExportCashReport } from './features/cash-report.js';
 import {
@@ -39,7 +40,7 @@ export function navigateTo(pageId) {
 
   if (pageId === 'dashboard')     loadDashboard();
   if (pageId === 'tickets')       loadTickets();
-  if (pageId === 'users')       { loadUsers(); loadPricing(); }
+  if (pageId === 'users')       { loadUsers(); loadPricing(); loadOperatingSettings(); }
   if (pageId === 'caja')          loadCashReport();
   if (pageId === 'create-ticket') initCreateTicketPage();
   if (pageId === 'validate' && store.currentUser?.role === 'GUARD') {
@@ -173,6 +174,9 @@ function setupEventListeners() {
 
   // Pricing form
   document.getElementById('pricing-form').addEventListener('submit', handleSavePricing);
+
+  // Operating settings form (horarios + aforo)
+  document.getElementById('settings-form').addEventListener('submit', handleSaveOperatingSettings);
 
   // Cash report (Caja) filters + export
   document.getElementById('caja-apply-filter').addEventListener('click', loadCashReport);
