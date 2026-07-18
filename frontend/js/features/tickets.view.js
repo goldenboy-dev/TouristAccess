@@ -2,7 +2,7 @@ import { store } from '../store.js';
 import { api } from '../api.js';
 import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
-import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing, printThermal as printThermalApi } from './tickets.service.js';
+import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing, printThermal as printThermalApi, regenerateQr as regenerateQrApi } from './tickets.service.js';
 
 let cajeroOptionsLoaded = false;
 
@@ -101,7 +101,10 @@ export async function loadTickets() {
             : `<span class="badge badge-${t.status.toLowerCase()}">${getStatusName(t.status)}</span>`}</td>
         <td>${t.createdBy?.email.split('@')[0] || '-'}</td>
         ${tokenCell}
-        <td>${t.status === 'ACTIVE' ? `<button class="btn-danger-sm" data-action="cancel-ticket" data-id="${t.id}">Cancelar</button>` : '—'}</td>
+        <td>${t.status === 'ACTIVE' ? `
+          <button class="btn-danger-sm" data-action="cancel-ticket" data-id="${t.id}">Cancelar</button>
+          ${store.currentUser?.role === 'ADMIN' ? `<button class="btn-secondary btn-sm" data-action="regenerate-qr" data-id="${t.id}" style="margin-left:.3rem">Regenerar QR</button>` : ''}
+        ` : '—'}</td>
       </tr>`;
     }).join('');
   } catch (err) {
@@ -500,6 +503,26 @@ export async function handlePrintThermal(id, btn) {
   try {
     await printThermalApi(id);
     showToast('Ticket enviado a la impresora térmica', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ─── Regenerate QR (Admin only) ──────────────────────────────
+// window.confirm() here, not a modal like cancel-ticket: regenerating
+// doesn't destroy anything (it can be undone by regenerating again), so the
+// stricter modal treatment an irreversible cancellation needs is more
+// friction than this action warrants.
+export async function handleRegenerateQr(id, btn) {
+  if (!window.confirm(`¿Regenerar el QR del ticket #${id}? El código impreso anteriormente dejará de funcionar.`)) return;
+
+  if (btn) btn.disabled = true;
+  try {
+    const data = await regenerateQrApi(id);
+    showToast(data.message || 'QR regenerado correctamente', 'success');
+    loadTickets();
   } catch (err) {
     showToast(err.message, 'error');
   } finally {

@@ -52,6 +52,9 @@ router.get('/:id', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticket
 // Cancel a ticket (Admin only) — motivo obligatorio, queda en la trazabilidad
 router.patch('/:id/cancel', authenticateToken, authorizeRoles('ADMIN'), validate(cancelTicketSchema), ticketController.cancelTicket);
 
+// Regenerate a ticket's QR/token (Admin only) — invalidates the previous one
+router.post('/:id/regenerate-qr', authenticateToken, authorizeRoles('ADMIN'), ticketController.regenerateQr);
+
 // Print a ticket on the configured network thermal printer (Admin & Cashier)
 router.post('/:id/print-thermal', authenticateToken, authorizeRoles('ADMIN', 'CASHIER'), ticketController.printThermal);
 

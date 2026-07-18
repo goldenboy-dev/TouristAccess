@@ -12,6 +12,10 @@ export async function printThermal(id) {
   return await api(`/tickets/${id}/print-thermal`, { method: 'POST' });
 }
 
+export async function regenerateQr(id) {
+  return await api(`/tickets/${id}/regenerate-qr`, { method: 'POST' });
+}
+
 export async function createTicket(payload) {
   return await api('/tickets', { 
     method: 'POST', 

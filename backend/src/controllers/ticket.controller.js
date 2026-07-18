@@ -164,6 +164,30 @@ const cancelTicket = async (req, res, next) => {
   }
 };
 
+// ─── REGENERATE QR (Admin only) ──────────────────────────────
+const regenerateQr = async (req, res, next) => {
+  try {
+    const { ticket, qr, htmlFile, previousTokenPrefix } = await ticketService.regenerateTicketToken({
+      id: req.params.id,
+      actorId: req.user.id,
+    });
+
+    await auditFromRequest(req, {
+      event: AUDIT_EVENTS.TICKET_QR_REGENERATED,
+      resource_type: 'Ticket',
+      resource_id: ticket.id,
+      metadata: { previousTokenPrefix, newTokenPrefix: ticket.token.slice(0, 8) },
+    });
+
+    res.status(200).json({
+      message: 'QR regenerado correctamente. El código anterior ya no es válido.',
+      ticket: htmlFile ? { ticket, qr, htmlFile } : { ticket, qr },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── PRICING (so the frontend never hardcodes prices) ────────
 const getPricing = async (_req, res, next) => {
   try {
@@ -192,4 +216,7 @@ const printThermal = async (req, res, next) => {
   }
 };
 
-module.exports = { createTicket, validateTicket, getTicket, listTickets, cancelTicket, getGroupByCode, getPricing, printThermal };
+module.exports = {
+  createTicket, validateTicket, getTicket, listTickets, cancelTicket, regenerateQr,
+  getGroupByCode, getPricing, printThermal,
+};

@@ -5,7 +5,7 @@ import { mockModule, loadModule } from './helpers/cjs-mock.js';
 // needs, so an unexpected query fails loudly instead of silently returning
 // undefined.
 const prismaMock = {
-  ticket: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
+  ticket: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), updateMany: vi.fn(), update: vi.fn(), create: vi.fn() },
   user: { findUnique: vi.fn() },
   scan: { findFirst: vi.fn(), create: vi.fn() },
   groupSummary: { create: vi.fn(), findUnique: vi.fn() },
@@ -341,6 +341,53 @@ describe('cancelTicketById', () => {
 });
 
 // ─── Validation at the gate ──────────────────────────────────
+describe('regenerateTicketToken', () => {
+  it('swaps the token for a fresh one, keeping everything else', async () => {
+    const ticket = activeTicket();
+    prismaMock.ticket.findUnique.mockResolvedValue(ticket);
+    prismaMock.ticket.update.mockImplementation(({ data }) => Promise.resolve({ ...ticket, ...data }));
+    prismaMock.user.findUnique.mockResolvedValue({ email: 'cajero@tourist.com' });
+
+    const { ticket: updated, previousTokenPrefix } = await ticketService.regenerateTicketToken({ id: '42', actorId: 1 });
+
+    expect(prismaMock.ticket.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 42 },
+      data: { token: expect.any(String) },
+    }));
+    expect(updated.token).not.toBe(ticket.token);
+    expect(previousTokenPrefix).toBe(ticket.token.slice(0, 8));
+  });
+
+  it('404s for a ticket that does not exist', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(null);
+
+    await expect(ticketService.regenerateTicketToken({ id: '999', actorId: 1 })).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses to regenerate a cancelled ticket', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(activeTicket({ status: 'CANCELLED' }));
+
+    await expect(ticketService.regenerateTicketToken({ id: '42', actorId: 1 })).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/ticket activo/),
+    });
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses to regenerate a used ticket', async () => {
+    prismaMock.ticket.findUnique.mockResolvedValue(activeTicket({ status: 'USED' }));
+
+    await expect(ticketService.regenerateTicketToken({ id: '42', actorId: 1 })).rejects.toMatchObject({
+      statusCode: 400,
+      message: expect.stringMatching(/ticket activo/),
+    });
+    expect(prismaMock.ticket.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('validateTicketByToken', () => {
   const guardId = 8;
 

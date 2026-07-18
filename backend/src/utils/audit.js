@@ -19,6 +19,7 @@ const AUDIT_EVENTS = {
   TICKET_VALIDATION_REJECTED: 'ticket.validation_rejected',
   TICKET_CANCELLED: 'ticket.cancelled',
   TICKET_PRINTED_THERMAL: 'ticket.printed_thermal',
+  TICKET_QR_REGENERATED: 'ticket.qr_regenerated',
   AUTH_LOGIN_SUCCESS: 'auth.login.success',
   AUTH_LOGIN_FAILED: 'auth.login.failed',
   AUTH_LOGIN_LOCKED: 'auth.login.locked',

@@ -10,7 +10,8 @@ import {
   loadTickets, initCreateTicketPage, handleCreateTicketSubmit,
   updatePriceSummary, renderCedulaFields, toggleToken, copyToken,
   handleCancelTicket, confirmCancelTicket, hideCancelTicketModal,
-  confirmAndCreate, hideConfirmationModal, handlePrint, handlePrintThermal
+  confirmAndCreate, hideConfirmationModal, handlePrint, handlePrintThermal,
+  handleRegenerateQr,
 } from './features/tickets.view.js';
 import { initScanner, stopScanner, handleManualValidate, resetScannerLock } from './features/scanner.js';
 import {
@@ -109,6 +110,7 @@ function setupEventListeners() {
     if (action === 'copy-token') copyToken(btn.dataset.token);
     if (action === 'cancel-ticket') handleCancelTicket(btn.dataset.id);
     if (action === 'print-thermal') handlePrintThermal(btn.dataset.id, btn);
+    if (action === 'regenerate-qr') handleRegenerateQr(btn.dataset.id, btn);
     if (action === 'edit-name') handleEditName(parseInt(btn.dataset.id), btn.dataset.name);
     if (action === 'edit-role') handleEditRole(parseInt(btn.dataset.id), btn.dataset.role);
     if (action === 'toggle-active') handleToggleActive(parseInt(btn.dataset.id), btn.dataset.active, btn.dataset.email);

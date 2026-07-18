@@ -469,6 +469,39 @@ async function listTickets({ filters, actor }) {
   return { tickets, total, page, limit };
 }
 
+// ─── REGENERATE QR ───────────────────────────────────────────
+// Swaps the token for a fresh one — the old one stops existing in the DB, so
+// a later scan of the original QR gets the ordinary "token_not_found"
+// rejection for free, without a separate revocation flag. Restricted to
+// ACTIVE: a CANCELLED ticket has nothing to re-issue, and a USED one already
+// let its holder in — a fresh QR for it would just be confusing, not useful.
+async function regenerateTicketToken({ id, actorId }) {
+  const ticketId = parseInt(id);
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+
+  if (!ticket) throw notFound('Ticket no encontrado');
+  if (ticket.status !== 'ACTIVE') {
+    throw badRequest('Solo se puede regenerar el QR de un ticket activo');
+  }
+
+  const previousTokenPrefix = ticket.token.slice(0, 8);
+  const newToken = generateSecureToken();
+
+  const updated = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { token: newToken },
+  });
+
+  const cashier = await prisma.user.findUnique({ where: { id: updated.createdById }, select: { email: true } });
+  const qr = await renderTicketQR(updated.token);
+  const html = renderTicketHTML(updated, qr, cashier?.email || '');
+  const htmlFile = await persistTicketHTML(updated, html);
+
+  logger.info({ event: 'ticket.qr_regenerated', ticketId, actorId, previousTokenPrefix });
+
+  return { ticket: updated, qr, htmlFile, previousTokenPrefix };
+}
+
 // ─── CANCEL ──────────────────────────────────────────────────
 async function cancelTicketById({ id, reason, cancelledById }) {
   const ticketId = parseInt(id);
@@ -505,6 +538,7 @@ module.exports = {
   getTicketById,
   listTickets,
   cancelTicketById,
+  regenerateTicketToken,
   getPricing,
   setAdultPrice,
   buildTicketRows,
