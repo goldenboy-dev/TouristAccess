@@ -77,7 +77,7 @@ function setupEventListeners() {
 
   // Tickets Filter setup
   document.getElementById('tickets-refresh-btn').addEventListener('click', loadTickets);
-  ['tickets-filter-status','tickets-filter-type','tickets-filter-payment'].forEach(id => {
+  ['tickets-filter-status','tickets-filter-type','tickets-filter-payment','tickets-filter-cajero'].forEach(id => {
     document.getElementById(id).addEventListener('change', loadTickets);
   });
 

@@ -1,7 +1,34 @@
 import { store } from '../store.js';
+import { api } from '../api.js';
 import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
 import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing, printThermal as printThermalApi } from './tickets.service.js';
+
+let cajeroOptionsLoaded = false;
+
+// Same select-per-cashier pattern as cash-report.js — only meaningful for
+// ADMIN, since a CASHIER is already limited to their own sales server-side.
+async function ensureCajeroFilter() {
+  const select = document.getElementById('tickets-filter-cajero');
+  if (!select) return;
+
+  if (store.currentUser?.role !== 'ADMIN') {
+    select.classList.add('hidden');
+    return;
+  }
+  select.classList.remove('hidden');
+
+  if (cajeroOptionsLoaded) return;
+  try {
+    const data = await api('/dashboard/users');
+    const cashiers = (data.users || []).filter(u => ['ADMIN', 'CASHIER'].includes(u.role));
+    select.innerHTML = '<option value="">Todos los cajeros</option>' +
+      cashiers.map(c => `<option value="${c.id}">${escapeHtml(c.name || c.email)}</option>`).join('');
+    cajeroOptionsLoaded = true;
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
 // ─── PRICING ────────────────────────────────────────────────
 // [FIX 6] No longer hardcoded — fetched from backend so it never drifts
@@ -19,6 +46,8 @@ async function loadPricing() {
 
 // ──── LIST TICKETS ────────────────────────────────────────────
 export async function loadTickets() {
+  await ensureCajeroFilter();
+
   const tbody = document.getElementById('tickets-tbody');
   tbody.innerHTML = '<tr><td colspan="10" class="table-empty">Cargando...</td></tr>';
 
@@ -26,12 +55,14 @@ export async function loadTickets() {
   const status  = document.getElementById('tickets-filter-status').value;
   const type    = document.getElementById('tickets-filter-type').value;
   const payment = document.getElementById('tickets-filter-payment').value;
+  const cajero  = document.getElementById('tickets-filter-cajero')?.value;
   const from    = document.getElementById('tickets-filter-from').value;
   const to      = document.getElementById('tickets-filter-to').value;
 
   if (status)  qs.set('status', status);
   if (type)    qs.set('visitor_type', type);
   if (payment) qs.set('payment_method', payment);
+  if (cajero)  qs.set('cajero_id', cajero);
   if (from)    qs.set('date_from', from);
   if (to)      qs.set('date_to', to);
 

@@ -601,6 +601,28 @@ describe('IDOR protection', () => {
     );
   });
 
+  it('lets an admin filter by cajero_id', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([]);
+    prismaMock.ticket.count.mockResolvedValue(0);
+
+    await ticketService.listTickets({ filters: { cajero_id: 7, page: 1, limit: 50 }, actor: { id: 1, role: 'ADMIN' } });
+
+    expect(prismaMock.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { createdById: 7 } }),
+    );
+  });
+
+  it('ignores cajero_id for a cashier — their own id always wins', async () => {
+    prismaMock.ticket.findMany.mockResolvedValue([]);
+    prismaMock.ticket.count.mockResolvedValue(0);
+
+    await ticketService.listTickets({ filters: { cajero_id: 7, page: 1, limit: 50 }, actor: { id: 3, role: 'CASHIER' } });
+
+    expect(prismaMock.ticket.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { createdById: 3 } }),
+    );
+  });
+
   it('404s a missing group before touching its cashier id', async () => {
     prismaMock.groupSummary.findUnique.mockResolvedValue(null);
 

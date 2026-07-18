@@ -1,5 +1,5 @@
 const { z } = require('zod');
-const { optionalDate, boundedInt, optionalEnum } = require('./query');
+const { optionalDate, optionalId, boundedInt, optionalEnum } = require('./query');
 const { DATE_RE, parseLocalDate, startOfToday, localDaysBetween } = require('../utils/date');
 const {
   VISITOR_TYPES, PAYMENT_METHODS, TICKET_STATUSES, MAX_PERSONS, MAX_VISIT_DATE_DRIFT_DAYS,
@@ -67,6 +67,9 @@ const listTicketsQuerySchema = z.object({
   date:           optionalDate('date'),
   date_from:      optionalDate('date_from'),
   date_to:        optionalDate('date_to'),
+  // Solo tiene efecto para ADMIN — un CASHIER ya está limitado a sus propias
+  // ventas en el servicio, sin importar qué mande acá (ver listTickets()).
+  cajero_id:      optionalId('cajero_id'),
   page:  boundedInt({ min: 1, max: 100000, fallback: 1,  label: 'page' }),
   limit: boundedInt({ min: 1, max: 200,    fallback: 50, label: 'limit' }),
 });

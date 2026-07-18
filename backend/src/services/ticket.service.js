@@ -431,15 +431,18 @@ async function getTicketById({ id, actor }) {
 }
 
 async function listTickets({ filters, actor }) {
-  const { status, date, date_from, date_to, visitor_type, payment_method, page = 1, limit = 50 } = filters;
+  const { status, date, date_from, date_to, visitor_type, payment_method, cajero_id, page = 1, limit = 50 } = filters;
   const where = {};
 
   if (status) where.status = status;
   if (visitor_type) where.visitor_type = visitor_type;
   if (payment_method) where.payment_method = payment_method;
 
-  // A cashier only ever sees their own sales.
+  // A cashier only ever sees their own sales — cajero_id is ignored for them
+  // rather than rejected, same "filter that doesn't apply" treatment as any
+  // other query param a CASHIER can't use.
   if (actor.role === 'CASHIER') where.createdById = actor.id;
+  else if (cajero_id) where.createdById = cajero_id;
 
   if (date) {
     where.visit_date = { gte: startOfLocalDay(date), lte: endOfLocalDay(date) };
