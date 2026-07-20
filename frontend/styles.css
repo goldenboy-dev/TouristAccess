@@ -431,6 +431,37 @@ body {
   transition: transform var(--transition);
 }
 
+/* Hidden on desktop — only relevant once the sidebar goes off-canvas
+   (see the responsive section below). */
+.sidebar-toggle-btn {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 150;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 95;
+}
+
+.sidebar-backdrop.visible {
+  display: block;
+}
+
 .sidebar-header {
   padding: 1.5rem 1.25rem;
   border-bottom: 1px solid var(--border-color);
@@ -713,6 +744,25 @@ body {
   text-align: center !important;
   color: var(--text-muted);
   padding: 3rem 1rem !important;
+}
+
+/* Skeleton loaders — shown in tables while a request is in flight, instead
+   of a static "Cargando..." row. */
+.skeleton-line {
+  height: 0.8rem;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.13) 37%, rgba(255,255,255,0.05) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line { animation: none; opacity: 0.6; }
 }
 
 /* Status Badges */
@@ -1107,7 +1157,10 @@ body {
 /* ============================================
    Responsive
    ============================================ */
-@media (max-width: 768px) {
+/* Tablets and phones: the fixed sidebar doesn't fit alongside real content,
+   so it goes off-canvas behind a hamburger toggle (below 768px this used to
+   have no way back — .sidebar.open was never toggled by anything). */
+@media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
   }
@@ -1116,7 +1169,30 @@ body {
   }
   .main-content {
     margin-left: 0;
-    padding: 1.25rem;
+  }
+  .sidebar-toggle-btn {
+    display: flex;
+  }
+}
+
+/* Tablet range: still plenty of width for a 2-column stat grid and
+   comfortable paddings, just not the full desktop sidebar. */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .main-content {
+    padding: 1.75rem 2rem 2rem calc(2rem + 3rem); /* left space clears the fixed toggle button */
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .confirm-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1.25rem 1.25rem 1.25rem calc(1.25rem + 3rem);
   }
   .form-row {
     flex-direction: column;
@@ -1129,6 +1205,9 @@ body {
   }
   .qr-display {
     margin: 0 auto;
+  }
+  .confirm-meta {
+    grid-template-columns: 1fr;
   }
 }
 

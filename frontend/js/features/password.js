@@ -79,6 +79,33 @@ export function hideChangePasswordModal() {
   document.getElementById('change-password-modal').classList.add('hidden');
 }
 
+// ─── Revoke all sessions (sidebar, self-service) ──
+export function showRevokeSessionsModal() {
+  document.getElementById('revoke-sessions-modal').classList.remove('hidden');
+}
+
+export function hideRevokeSessionsModal() {
+  document.getElementById('revoke-sessions-modal').classList.add('hidden');
+}
+
+export async function confirmRevokeSessions() {
+  const btn = document.getElementById('revoke-sessions-confirm');
+  btn.disabled = true;
+  try {
+    const data = await api('/auth/revoke-my-sessions', { method: 'POST' });
+    hideRevokeSessionsModal();
+    showToast(data.message, 'success');
+    // The call just revoked this session's own refresh token too — log out
+    // now instead of waiting for the access token to expire and the next
+    // request to fail with a confusing "session expired" surprise.
+    await logout();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 export async function handleChangePasswordSubmit(e) {
   e.preventDefault();
   const errBox = document.getElementById('change-password-errors');

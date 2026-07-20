@@ -1,0 +1,40 @@
+name: Backend tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+
+# The 183 tests stub Prisma via require.cache (see tests/helpers/cjs-mock.js)
+# and never touch a real database — no postgres service needed here. They do
+# hit real bugs a plain code review misses (see bug 13 in claude.md), but
+# only the ones exercisable without Postgres/Docker; anything that needs the
+# real stack (docker compose up) still has to be verified by hand.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: 'postgresql://test:test@localhost:5432/test?schema=public'
+
+      - run: npm test

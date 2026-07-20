@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
-import { escapeHtml, todayLocalStr } from '../utils/formatters.js';
+import { escapeHtml, todayLocalStr, skeletonRows } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 
 let fraudRefreshInterval = null;
@@ -131,7 +131,7 @@ async function handleAlertStatusChange(alertId, status) {
 export async function loadAlertHistory() {
   const tbody = document.getElementById('alert-history-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Cargando...</td></tr>';
+  tbody.innerHTML = skeletonRows(6);
 
   try {
     const status = document.getElementById('alert-history-status')?.value || '';

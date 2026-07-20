@@ -31,7 +31,19 @@ export function getVisitorTypeClass(t) {
   return { ADULT: 'badge-adult', CHILD: 'badge-child', LOCAL: 'badge-local' }[t] || '';
 }
 
-export function escapeHtml(str) { 
+const SKELETON_WIDTHS = [85, 60, 75, 90, 55, 70, 65, 80, 50, 95];
+
+// Table-body skeleton rows shown while a request is in flight, instead of a
+// static "Cargando..." row — `cols` must match the table's <th> count.
+export function skeletonRows(cols, rows = 4) {
+  return Array.from({ length: rows }, () =>
+    `<tr>${Array.from({ length: cols }, (_, i) =>
+      `<td><div class="skeleton-line" style="width:${SKELETON_WIDTHS[(i + rows) % SKELETON_WIDTHS.length]}%"></div></td>`
+    ).join('')}</tr>`
+  ).join('');
+}
+
+export function escapeHtml(str) {
   if (!str) return '';
   const d = document.createElement('div'); 
   d.textContent = str; 

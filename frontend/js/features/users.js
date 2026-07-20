@@ -1,12 +1,12 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { getRoleName } from '../utils/dom.js';
-import { formatDate, escapeHtml } from '../utils/formatters.js';
+import { formatDate, escapeHtml, skeletonRows } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 
 export async function loadUsers() {
   const tbody = document.getElementById('users-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Cargando...</td></tr>';
+  tbody.innerHTML = skeletonRows(8);
   try {
     const data = await api('/dashboard/users');
     if (!data.users || !data.users.length) {

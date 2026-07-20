@@ -24,8 +24,15 @@ import {
 import { loadCashReport, handleExportCashReport } from './features/cash-report.js';
 import {
   handleForcedPasswordChangeSubmit, showChangePasswordModal,
-  hideChangePasswordModal, handleChangePasswordSubmit
+  hideChangePasswordModal, handleChangePasswordSubmit,
+  showRevokeSessionsModal, hideRevokeSessionsModal, confirmRevokeSessions,
 } from './features/password.js';
+import { loadAuditLog, goToPrevAuditPage, goToNextAuditPage, clearAuditFilters } from './features/audit-log.js';
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('visible');
+}
 
 export function navigateTo(pageId) {
   domRefs.pages.forEach(p => p.classList.remove('active'));
@@ -43,6 +50,7 @@ export function navigateTo(pageId) {
   if (pageId === 'tickets')       loadTickets();
   if (pageId === 'users')       { loadUsers(); loadPricing(); loadOperatingSettings(); }
   if (pageId === 'caja')          loadCashReport();
+  if (pageId === 'audit')         loadAuditLog(1);
   if (pageId === 'create-ticket') initCreateTicketPage();
   if (pageId === 'validate' && store.currentUser?.role === 'GUARD') {
     document.getElementById('validate-token').value = '';
@@ -63,9 +71,15 @@ function setupEventListeners() {
       const password = document.getElementById('login-password').value;
       await login(email, password);
     } catch (err) {
-      domRefs.loginError.textContent = err.message;
+      // Wrong-password responses carry `attemptsLeft` (how many tries before
+      // lockout) alongside the generic "Credenciales inválidas" message —
+      // the backend doesn't fold it into the message text itself.
+      const attemptsLeft = err.data?.attemptsLeft;
+      domRefs.loginError.textContent = Number.isInteger(attemptsLeft)
+        ? `${err.message} (quedan ${attemptsLeft} intento${attemptsLeft === 1 ? '' : 's'} antes del bloqueo)`
+        : err.message;
       domRefs.loginError.classList.remove('hidden');
-    } finally { 
+    } finally {
       btn.disabled = false; 
     }
   });
@@ -74,7 +88,16 @@ function setupEventListeners() {
 
   domRefs.navItems.forEach(item => item.addEventListener('click', () => {
     if (item.dataset.page) navigateTo(item.dataset.page);
+    closeSidebar();
   }));
+
+  // Tablet/mobile sidebar toggle — the sidebar goes off-canvas below 1024px
+  // (see styles.css), so it needs a way back onto the screen.
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebar-backdrop').classList.add('visible');
+  });
+  document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
 
   // Tickets Filter setup
   document.getElementById('tickets-refresh-btn').addEventListener('click', loadTickets);
@@ -206,6 +229,27 @@ function setupEventListeners() {
   document.getElementById('change-password-btn').addEventListener('click', showChangePasswordModal);
   document.getElementById('change-password-form').addEventListener('submit', handleChangePasswordSubmit);
   document.getElementById('change-password-cancel').addEventListener('click', hideChangePasswordModal);
+
+  // Revoke all sessions (from the sidebar)
+  document.getElementById('revoke-sessions-btn').addEventListener('click', showRevokeSessionsModal);
+  document.getElementById('revoke-sessions-confirm').addEventListener('click', confirmRevokeSessions);
+  document.getElementById('revoke-sessions-cancel').addEventListener('click', hideRevokeSessionsModal);
+
+  // Audit log (admin)
+  document.getElementById('audit-apply-filter').addEventListener('click', () => loadAuditLog(1));
+  document.getElementById('audit-clear-filter').addEventListener('click', clearAuditFilters);
+  document.getElementById('audit-prev-page').addEventListener('click', goToPrevAuditPage);
+  document.getElementById('audit-next-page').addEventListener('click', goToNextAuditPage);
+}
+
+// ─── PWA: offline app shell ───────────────────
+// Only registers over HTTPS or localhost — the browser refuses service
+// workers on plain HTTP anywhere else, which matches this project's existing
+// HTTPS-in-production stance (see httpsRedirect.js).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed', err));
+  });
 }
 
 // ─── Init ────────────────────────────────────

@@ -1,7 +1,7 @@
 import { api } from '../api.js';
 import { API_URL } from '../config.js';
 import { store } from '../store.js';
-import { escapeHtml, getPaymentIcon } from '../utils/formatters.js';
+import { escapeHtml, getPaymentIcon, skeletonRows } from '../utils/formatters.js';
 import { showToast } from '../utils/notifications.js';
 
 let cajeroOptionsLoaded = false;
@@ -34,7 +34,7 @@ function buildQuery() {
 export async function loadCashReport() {
   await ensureCajeroOptions();
   const tbody = document.getElementById('caja-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Cargando...</td></tr>';
+  tbody.innerHTML = skeletonRows(8);
 
   try {
     const qs = buildQuery();

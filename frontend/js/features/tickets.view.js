@@ -1,6 +1,6 @@
 import { store } from '../store.js';
 import { api } from '../api.js';
-import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr } from '../utils/formatters.js';
+import { getPaymentIcon, escapeHtml, getStatusName, formatDate, getVisitorTypeName, getVisitorTypeClass, todayLocalStr, skeletonRows } from '../utils/formatters.js';
 import { showToast, playSound } from '../utils/notifications.js';
 import { fetchTickets, cancelTicket as cancelTicketApi, createTicket, fetchPricing, printThermal as printThermalApi, regenerateQr as regenerateQrApi } from './tickets.service.js';
 
@@ -49,7 +49,7 @@ export async function loadTickets() {
   await ensureCajeroFilter();
 
   const tbody = document.getElementById('tickets-tbody');
-  tbody.innerHTML = '<tr><td colspan="10" class="table-empty">Cargando...</td></tr>';
+  tbody.innerHTML = skeletonRows(10);
 
   const qs = new URLSearchParams();
   const status  = document.getElementById('tickets-filter-status').value;

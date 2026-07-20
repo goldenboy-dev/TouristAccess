@@ -1,5 +1,6 @@
 import { API_URL } from './config.js';
 import { store, setAuthToken, setRefreshToken } from './store.js';
+import { showToast } from './utils/notifications.js';
 
 let isRefreshing = false;
 let refreshSubscribers = [];
@@ -78,7 +79,18 @@ export async function api(endpoint, options = {}) {
   if (!res.ok) {
     const err = new Error(data.error || data.message || 'Error en la solicitud');
     err.code = data.code;
+    // `errorHandler` (backend) merges AppError.details flat into the body
+    // (retryAfterMinutes, attemptsLeft, errors) instead of nesting them under
+    // `details` — only the Zod validation path (validate.js) actually nests
+    // as `data.details`. Keep the whole body so callers can read either shape.
     err.details = data.details;
+    err.data = data;
+
+    // HTTPS_REQUIRED can surface from any endpoint (mixed-content/misconfigured
+    // reverse proxy), not just the form that happened to trigger it — surface
+    // it globally instead of requiring every call site to special-case it.
+    if (data.code === 'HTTPS_REQUIRED') showToast(err.message, 'error');
+
     throw err;
   }
   return data;

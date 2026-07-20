@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Tourist Access Control System - Sistema de control de acceso turístico">
   <title>Tourist Access | Control System</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2A9D4E">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -97,6 +101,13 @@
 
   <!-- Main App -->
   <div id="app-screen" class="screen">
+    <!-- Sidebar toggle (tablet/mobile only — lives outside <nav> so it stays
+         reachable while the sidebar itself is off-screen) -->
+    <button id="sidebar-toggle" class="sidebar-toggle-btn" aria-label="Abrir menú" aria-controls="sidebar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
     <!-- Sidebar -->
     <nav id="sidebar" class="sidebar">
       <div class="sidebar-header">
@@ -134,6 +145,10 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
           <span>Caja</span>
         </button>
+        <button class="nav-item" data-page="audit" id="nav-audit" data-roles="ADMIN">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Auditoría</span>
+        </button>
       </div>
       <div class="sidebar-footer">
         <div class="user-info">
@@ -145,6 +160,9 @@
         </div>
         <button class="btn-logout btn-change-password" id="change-password-btn" title="Cambiar contraseña">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
+        <button class="btn-logout" id="revoke-sessions-btn" title="Cerrar sesión en todos los dispositivos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
         </button>
         <button class="btn-logout" id="logout-btn" title="Cerrar sesión">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -267,9 +285,7 @@
                     <th>Riesgo</th>
                   </tr>
                 </thead>
-                <tbody id="fraud-risk-tbody">
-                  <tr><td colspan="8" class="table-empty">Cargando...</td></tr>
-                </tbody>
+                <tbody id="fraud-risk-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr></tbody>
               </table>
             </div>
           </div>
@@ -315,9 +331,7 @@
                     <th>Razón</th>
                   </tr>
                 </thead>
-                <tbody id="fraud-suspicious-tbody">
-                  <tr><td colspan="6" class="table-empty">Cargando...</td></tr>
-                </tbody>
+                <tbody id="fraud-suspicious-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr></tbody>
               </table>
             </div>
           </div>
@@ -344,9 +358,7 @@
                     <th>Fecha</th><th>Cajero</th><th>Nivel</th><th>Tipo</th><th>Mensaje</th><th>Estado</th>
                   </tr>
                 </thead>
-                <tbody id="alert-history-tbody">
-                  <tr><td colspan="6" class="table-empty">Cargando...</td></tr>
-                </tbody>
+                <tbody id="alert-history-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td></tr></tbody>
               </table>
             </div>
           </div>
@@ -399,7 +411,7 @@
                 <th>Fecha Visita</th><th>Estado</th><th>Cajero</th><th>Token</th><th>Acciones</th>
               </tr>
             </thead>
-            <tbody id="tickets-tbody"><tr><td colspan="10" class="table-empty">Cargando tickets...</td></tr></tbody>
+            <tbody id="tickets-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td><td><div class="skeleton-line" style="width:75%"></div></td><td><div class="skeleton-line" style="width:90%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td><td><div class="skeleton-line" style="width:75%"></div></td><td><div class="skeleton-line" style="width:90%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td><td><div class="skeleton-line" style="width:75%"></div></td><td><div class="skeleton-line" style="width:90%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td><td><div class="skeleton-line" style="width:75%"></div></td><td><div class="skeleton-line" style="width:90%"></div></td></tr></tbody>
           </table>
         </div>
       </section>
@@ -598,7 +610,7 @@
         <div class="table-container glass-card">
           <table class="data-table">
             <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Tickets</th><th>Escaneos</th><th>Registro</th></tr></thead>
-            <tbody id="users-tbody"><tr><td colspan="8" class="table-empty">Cargando usuarios...</td></tr></tbody>
+            <tbody id="users-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr></tbody>
           </table>
         </div>
       </section>
@@ -637,11 +649,64 @@
                 <th>QR</th><th>Tarjeta</th><th>Total</th><th>Cancelados</th>
               </tr>
             </thead>
-            <tbody id="caja-tbody"><tr><td colspan="8" class="table-empty">Cargando...</td></tr></tbody>
+            <tbody id="caja-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr></tbody>
           </table>
         </div>
         <div class="glass-card" style="padding:1rem 1.5rem;margin-top:1rem;text-align:right;">
           <strong>Total general: <span id="caja-grand-total">₲0</span></strong>
+        </div>
+      </section>
+
+      <!-- ══ AUDIT LOG (ADMIN) ═══════════════════════════════ -->
+      <section id="page-audit" class="page">
+        <div class="page-header">
+          <div>
+            <h2>Auditoría</h2>
+            <p class="page-subtitle">Registro de eventos del sistema</p>
+          </div>
+        </div>
+        <div class="page-actions" style="flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;">
+          <select id="audit-filter-event" class="select-input" style="width:200px">
+            <option value="">Todos los eventos</option>
+          </select>
+          <select id="audit-filter-outcome" class="select-input" style="width:140px">
+            <option value="">Todos los resultados</option>
+            <option value="SUCCESS">Éxito</option>
+            <option value="FAILURE">Falla</option>
+          </select>
+          <select id="audit-filter-resource" class="select-input" style="width:150px">
+            <option value="">Todos los recursos</option>
+            <option value="User">Usuario</option>
+            <option value="Ticket">Ticket</option>
+            <option value="GroupSummary">Grupo</option>
+            <option value="AppSetting">Configuración</option>
+            <option value="FraudAlert">Alerta de fraude</option>
+          </select>
+          <input type="date" id="audit-filter-from" class="select-input" style="width:155px" title="Desde">
+          <input type="date" id="audit-filter-to" class="select-input" style="width:155px" title="Hasta">
+          <button class="btn-secondary" id="audit-apply-filter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtrar
+          </button>
+          <button class="btn-secondary" id="audit-clear-filter">Reset</button>
+        </div>
+        <div class="table-container glass-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Evento</th><th>Actor</th><th>Rol</th>
+                <th>Resultado</th><th>Recurso</th><th>IP</th><th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody"><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr><tr><td><div class="skeleton-line" style="width:55%"></div></td><td><div class="skeleton-line" style="width:70%"></div></td><td><div class="skeleton-line" style="width:65%"></div></td><td><div class="skeleton-line" style="width:80%"></div></td><td><div class="skeleton-line" style="width:50%"></div></td><td><div class="skeleton-line" style="width:95%"></div></td><td><div class="skeleton-line" style="width:85%"></div></td><td><div class="skeleton-line" style="width:60%"></div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="page-actions" style="justify-content:space-between;margin-top:1rem;">
+          <span id="audit-page-info" class="page-subtitle"></span>
+          <div class="filter-group">
+            <button class="btn-secondary" id="audit-prev-page">← Anterior</button>
+            <button class="btn-secondary" id="audit-next-page">Siguiente →</button>
+          </div>
         </div>
       </section>
 
@@ -713,6 +778,20 @@
       <div class="confirmation-modal-actions">
         <button class="btn-danger" id="cancel-ticket-confirm" style="width:auto;padding:0.8rem 2rem;">Sí, anular</button>
         <button class="btn-secondary" id="cancel-ticket-dismiss">Volver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revoke all sessions (sidebar, self-service) -->
+  <div id="revoke-sessions-modal" class="confirmation-modal hidden">
+    <div class="confirmation-modal-content glass-card">
+      <h3 class="confirmation-modal-title">⚠️ Cerrar sesión en todos los dispositivos</h3>
+      <div style="margin:1rem 0">
+        Esto va a invalidar todas las sesiones activas de tu cuenta, incluida esta. Vas a tener que volver a iniciar sesión.
+      </div>
+      <div class="confirmation-modal-actions">
+        <button class="btn-danger" id="revoke-sessions-confirm" style="width:auto;padding:0.8rem 2rem;">Sí, cerrar todas</button>
+        <button class="btn-secondary" id="revoke-sessions-cancel">Cancelar</button>
       </div>
     </div>
   </div>
