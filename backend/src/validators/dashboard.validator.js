@@ -43,6 +43,13 @@ const updatePricingSchema = z.object({
 const emptyToNull = (v) => (v === '' ? null : v);
 
 const updateOperatingSettingsSchema = z.object({
+  business_name: z.preprocess(emptyToNull, z.union([
+    z.null(),
+    z.string().trim()
+      .min(2, 'business_name debe tener al menos 2 caracteres')
+      .max(100, 'business_name no puede superar 100 caracteres')
+      .refine((v) => !/<[^>]*>/.test(v), 'business_name no puede contener HTML'),
+  ])).optional(),
   operating_hours_start: z.preprocess(emptyToNull, z.union([
     z.null(),
     z.string().regex(TIME_RE, 'operating_hours_start debe tener formato HH:MM'),

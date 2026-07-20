@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockModule, loadModule } from './helpers/cjs-mock.js';
 
 const prismaMock = {
-  appSetting: { findMany: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
+  appSetting: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
   ticket: { count: vi.fn() },
   $transaction: vi.fn(),
 };
@@ -26,14 +26,16 @@ describe('getOperatingSettings', () => {
       operating_hours_start: null,
       operating_hours_end: null,
       max_daily_capacity: null,
+      business_name: null,
     });
   });
 
-  it('reads configured hours and capacity from the AppSetting rows', async () => {
+  it('reads configured hours, capacity and business name from the AppSetting rows', async () => {
     prismaMock.appSetting.findMany.mockResolvedValue([
       { key: 'operating_hours_start', value: '07:00' },
       { key: 'operating_hours_end', value: '20:00' },
       { key: 'max_daily_capacity', value: '500' },
+      { key: 'business_name', value: 'Parque Aventura' },
     ]);
 
     const settings = await settingsService.getOperatingSettings();
@@ -42,7 +44,22 @@ describe('getOperatingSettings', () => {
       operating_hours_start: '07:00',
       operating_hours_end: '20:00',
       max_daily_capacity: 500,
+      business_name: 'Parque Aventura',
     });
+  });
+});
+
+describe('getBusinessName', () => {
+  it('falls back to the generic default when unconfigured', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue(null);
+
+    expect(await settingsService.getBusinessName()).toBe('Sistema de Entradas');
+  });
+
+  it('returns the configured name', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue({ key: 'business_name', value: 'Parque Aventura' });
+
+    expect(await settingsService.getBusinessName()).toBe('Parque Aventura');
   });
 });
 
@@ -126,6 +143,34 @@ describe('updateOperatingSettings', () => {
   it('refuses an empty update', async () => {
     await expect(settingsService.updateOperatingSettings({}, 1)).rejects.toThrow(/Nada/);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('upserts the business name', async () => {
+    await settingsService.updateOperatingSettings({ business_name: 'Parque Aventura' }, 1);
+
+    expect(prismaMock.appSetting.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { key: 'business_name' },
+      create: expect.objectContaining({ value: 'Parque Aventura' }),
+    }));
+  });
+
+  it('trims the business name before storing it', async () => {
+    await settingsService.updateOperatingSettings({ business_name: '  Parque Aventura  ' }, 1);
+
+    expect(prismaMock.appSetting.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ value: 'Parque Aventura' }),
+    }));
+  });
+
+  it('clears the business name when sent as null (reverts to the default)', async () => {
+    await settingsService.updateOperatingSettings({ business_name: null }, 1);
+
+    expect(prismaMock.appSetting.deleteMany).toHaveBeenCalledWith({ where: { key: 'business_name' } });
+  });
+
+  it('rejects a business name shorter than 2 characters (defence-in-depth, Zod already blocks this)', async () => {
+    await expect(settingsService.updateOperatingSettings({ business_name: 'A' }, 1))
+      .rejects.toThrow(/2 y 100/);
   });
 });
 

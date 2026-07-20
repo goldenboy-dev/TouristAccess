@@ -556,8 +556,14 @@
         </div>
 
         <div class="form-container glass-card" style="margin-bottom:1.5rem">
-          <h3 style="margin-bottom:1rem">Horario de operación y aforo máximo</h3>
+          <h3 style="margin-bottom:1rem">Configuración general del sitio</h3>
           <form id="settings-form">
+            <div class="form-row">
+              <div class="form-group" style="width:100%">
+                <label for="settings-business-name">Nombre del negocio / sitio</label>
+                <input type="text" id="settings-business-name" maxlength="100" placeholder="Sistema de Entradas">
+              </div>
+            </div>
             <div class="form-row">
               <div class="form-group">
                 <label for="settings-hours-start">Hora de apertura</label>
@@ -577,7 +583,7 @@
             </div>
           </form>
           <p id="settings-msg" class="hidden"></p>
-          <small>Dejá ambas horas vacías para no restringir el escaneo por horario, o el aforo vacío para no limitar las ventas por día. Un guardia que escanee fuera de horario ve el acceso rechazado; una venta que supere el aforo del día se rechaza al confirmar.</small>
+          <small>El nombre del negocio aparece en los tickets impresos y en el recibo de la impresora térmica — dejalo vacío para usar "Sistema de Entradas". Dejá ambas horas vacías para no restringir el escaneo por horario, o el aforo vacío para no limitar las ventas por día. Un guardia que escanee fuera de horario ve el acceso rechazado; una venta que supere el aforo del día se rechaza al confirmar.</small>
         </div>
 
         <div id="register-form-container" class="form-container glass-card hidden" style="margin-bottom:1.5rem">

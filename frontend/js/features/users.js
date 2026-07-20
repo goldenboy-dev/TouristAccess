@@ -219,6 +219,7 @@ export async function handleSavePricing(e) {
 export async function loadOperatingSettings() {
   try {
     const data = await api('/dashboard/settings');
+    document.getElementById('settings-business-name').value = data.business_name || '';
     document.getElementById('settings-hours-start').value = data.operating_hours_start || '';
     document.getElementById('settings-hours-end').value = data.operating_hours_end || '';
     document.getElementById('settings-max-capacity').value = data.max_daily_capacity ?? '';
@@ -237,7 +238,8 @@ export async function handleSaveOperatingSettings(e) {
       method: 'PATCH',
       body: JSON.stringify({
         // Empty string means "clear this field" — the backend turns it into
-        // null (unrestricted), not zero.
+        // null (unrestricted / default), not zero.
+        business_name: document.getElementById('settings-business-name').value,
         operating_hours_start: document.getElementById('settings-hours-start').value,
         operating_hours_end: document.getElementById('settings-hours-end').value,
         max_daily_capacity: document.getElementById('settings-max-capacity').value,

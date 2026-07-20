@@ -268,4 +268,21 @@ describe('updateOperatingSettingsSchema', () => {
   it('accepts an empty body (nothing to update yet — the service rejects that separately)', () => {
     expect(updateOperatingSettingsSchema.safeParse({}).success).toBe(true);
   });
+
+  it('accepts a valid business_name', () => {
+    const result = updateOperatingSettingsSchema.safeParse({ business_name: 'Parque Aventura' });
+    expect(result.success).toBe(true);
+    expect(result.data.business_name).toBe('Parque Aventura');
+  });
+
+  it('treats an empty business_name as "clear this field"', () => {
+    const result = updateOperatingSettingsSchema.safeParse({ business_name: '' });
+    expect(result.success).toBe(true);
+    expect(result.data.business_name).toBeNull();
+  });
+
+  it('rejects a business_name that is too short or contains HTML', () => {
+    expect(updateOperatingSettingsSchema.safeParse({ business_name: 'A' }).success).toBe(false);
+    expect(updateOperatingSettingsSchema.safeParse({ business_name: '<b>Parque</b>' }).success).toBe(false);
+  });
 });

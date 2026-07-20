@@ -198,10 +198,11 @@ async function createTicketGroup({ input, cashierId }) {
     return { groupSummary: summary, tickets: created };
   });
 
+  const businessName = await settingsService.getBusinessName();
   const responseTickets = [];
   for (const ticket of tickets) {
     const qr = await renderTicketQR(ticket.token);
-    const html = renderTicketHTML(ticket, qr, cashier.email);
+    const html = renderTicketHTML(ticket, qr, cashier.email, businessName);
     const htmlFile = await persistTicketHTML(ticket, html);
     responseTickets.push(htmlFile ? { ticket, qr, htmlFile } : { ticket, qr });
   }
@@ -493,8 +494,9 @@ async function regenerateTicketToken({ id, actorId }) {
   });
 
   const cashier = await prisma.user.findUnique({ where: { id: updated.createdById }, select: { email: true } });
+  const businessName = await settingsService.getBusinessName();
   const qr = await renderTicketQR(updated.token);
-  const html = renderTicketHTML(updated, qr, cashier?.email || '');
+  const html = renderTicketHTML(updated, qr, cashier?.email || '', businessName);
   const htmlFile = await persistTicketHTML(updated, html);
 
   logger.info({ event: 'ticket.qr_regenerated', ticketId, actorId, previousTokenPrefix });

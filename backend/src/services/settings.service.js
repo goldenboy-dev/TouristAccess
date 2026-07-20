@@ -15,17 +15,32 @@ const { TIME_RE } = require('../constants/settings');
 const HOURS_START_KEY = 'operating_hours_start';
 const HOURS_END_KEY = 'operating_hours_end';
 const MAX_CAPACITY_KEY = 'max_daily_capacity';
+const BUSINESS_NAME_KEY = 'business_name';
+// Generic on purpose — this system is not tied to any one venue. Whatever
+// admin sets from the settings panel shows up on printed tickets and thermal
+// receipts instead (see getBusinessName below).
+const DEFAULT_BUSINESS_NAME = 'Sistema de Entradas';
 
 async function getOperatingSettings() {
   const rows = await prisma.appSetting.findMany({
-    where: { key: { in: [HOURS_START_KEY, HOURS_END_KEY, MAX_CAPACITY_KEY] } },
+    where: { key: { in: [HOURS_START_KEY, HOURS_END_KEY, MAX_CAPACITY_KEY, BUSINESS_NAME_KEY] } },
   });
   const byKey = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   return {
     operating_hours_start: byKey[HOURS_START_KEY] || null,
     operating_hours_end: byKey[HOURS_END_KEY] || null,
     max_daily_capacity: byKey[MAX_CAPACITY_KEY] ? parseInt(byKey[MAX_CAPACITY_KEY], 10) : null,
+    business_name: byKey[BUSINESS_NAME_KEY] || null,
   };
+}
+
+// Resolved value (fallback applied) — what actually goes on a ticket/receipt.
+// Unlike getOperatingSettings() above (which returns the raw stored value,
+// null when unset, for the admin form to show a placeholder), callers that
+// need to print/display the name never want a blank string.
+async function getBusinessName() {
+  const setting = await prisma.appSetting.findUnique({ where: { key: BUSINESS_NAME_KEY } });
+  return (setting && setting.value) || DEFAULT_BUSINESS_NAME;
 }
 
 function upsertSetting(key, value, actorId) {
@@ -64,6 +79,19 @@ async function updateOperatingSettings(input, actorId) {
       ops.push(upsertSetting(HOURS_END_KEY, operating_hours_end, actorId));
     } else {
       ops.push(prisma.appSetting.deleteMany({ where: { key: { in: [HOURS_START_KEY, HOURS_END_KEY] } } }));
+    }
+  }
+
+  const { business_name } = input;
+  if (business_name !== undefined) {
+    if (business_name === null) {
+      ops.push(prisma.appSetting.deleteMany({ where: { key: BUSINESS_NAME_KEY } }));
+    } else {
+      const trimmed = String(business_name).trim();
+      if (trimmed.length < 2 || trimmed.length > 100) {
+        throw badRequest('business_name debe tener entre 2 y 100 caracteres');
+      }
+      ops.push(upsertSetting(BUSINESS_NAME_KEY, trimmed, actorId));
     }
   }
 
@@ -110,4 +138,5 @@ module.exports = {
   updateOperatingSettings,
   isWithinOperatingHours,
   getSoldCountForDate,
+  getBusinessName,
 };

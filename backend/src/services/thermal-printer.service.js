@@ -45,13 +45,13 @@ function money(amount) {
   return amount > 0 ? `Gs. ${amount.toLocaleString('es-PY')}` : 'GRATIS';
 }
 
-function buildReceipt(printer, ticket, cashierEmail) {
+function buildReceipt(printer, ticket, cashierEmail, businessName) {
   printer.alignCenter();
   printer.bold(true);
   printer.setTextDoubleHeight();
-  printer.println('CERRO YAGUARÓN');
+  printer.println(businessName.toUpperCase());
   printer.setTextNormal();
-  printer.println('Acceso Turístico');
+  printer.println('Ticket de Acceso');
   printer.bold(false);
   printer.drawLine();
 
@@ -85,7 +85,7 @@ function buildReceipt(printer, ticket, cashierEmail) {
  * cashier losing the printer mid-shift is an expected failure mode, not a
  * 500.
  */
-async function printTicket(ticket, cashierEmail) {
+async function printTicket(ticket, cashierEmail, businessName = 'Sistema de Entradas') {
   if (!isEnabled()) {
     throw serviceUnavailable('La impresión térmica no está habilitada en este servidor', { code: 'THERMAL_PRINTING_DISABLED' });
   }
@@ -105,7 +105,7 @@ async function printTicket(ticket, cashierEmail) {
     throw serviceUnavailable('La impresora térmica no responde. Revisá que esté encendida y conectada a la red.', { code: 'PRINTER_UNREACHABLE' });
   }
 
-  buildReceipt(printer, ticket, cashierEmail);
+  buildReceipt(printer, ticket, cashierEmail, businessName);
 
   try {
     await printer.execute();

@@ -5,6 +5,7 @@
  */
 const ticketService = require('../services/ticket.service');
 const thermalPrinterService = require('../services/thermal-printer.service');
+const settingsService = require('../services/settings.service');
 const { auditFromRequest, AUDIT_EVENTS } = require('../utils/audit');
 const { parseLocalDate } = require('../utils/date');
 
@@ -201,7 +202,8 @@ const getPricing = async (_req, res, next) => {
 const printThermal = async (req, res, next) => {
   try {
     const ticket = await ticketService.getTicketById({ id: req.params.id, actor: actorFrom(req) });
-    await thermalPrinterService.printTicket(ticket, req.user.email);
+    const businessName = await settingsService.getBusinessName();
+    await thermalPrinterService.printTicket(ticket, req.user.email, businessName);
 
     await auditFromRequest(req, {
       event: AUDIT_EVENTS.TICKET_PRINTED_THERMAL,

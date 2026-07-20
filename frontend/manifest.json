@@ -1,7 +1,7 @@
 {
   "name": "Tourist Access | Control System",
   "short_name": "Tourist Access",
-  "description": "Control de acceso turístico para el Cerro Yaguarón",
+  "description": "Sistema de control de acceso y venta de entradas",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

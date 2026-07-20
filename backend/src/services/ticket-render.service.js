@@ -49,7 +49,7 @@ async function renderTicketQR(token) {
   });
 }
 
-function renderTicketHTML(ticket, qrDataUrl, cashierEmail) {
+function renderTicketHTML(ticket, qrDataUrl, cashierEmail, businessName = 'Sistema de Entradas') {
   const typeLabel = getVisitorLabel(ticket.visitor_type);
   const visitDate = new Date(ticket.visit_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const createdAt = new Date(ticket.createdAt).toLocaleString('es-ES');
@@ -60,7 +60,7 @@ function renderTicketHTML(ticket, qrDataUrl, cashierEmail) {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Ticket #${ticket.id} - Tourist Access</title>
+<title>Ticket #${ticket.id} - ${escapeHtml(businessName)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Arial, sans-serif; background:#f5f5f5; display:flex; justify-content:center; padding:2rem; }
@@ -84,8 +84,8 @@ function renderTicketHTML(ticket, qrDataUrl, cashierEmail) {
 <body>
 <div class="ticket">
   <div class="ticket-header">
-    <h1>🎫 Tourist Access</h1>
-    <p>Cerro Yaguarón — Ticket de Acceso</p>
+    <h1>🎫 ${escapeHtml(businessName)}</h1>
+    <p>Ticket de Acceso</p>
   </div>
   <div class="ticket-body">
     <div class="ticket-field">

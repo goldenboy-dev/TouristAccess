@@ -4,7 +4,7 @@
 
 :root {
   /* Brand Colors */
-  --color-verde-yaguarón: #2A9D4E;
+  --color-verde-primario: #2A9D4E;
   --color-verde-oscuro: #1E7A3E;
   --color-naranja-sol: #F48C2F;
   --color-azul-agua: #00B4D8;
@@ -21,9 +21,9 @@
   --text-secondary: rgba(255, 255, 255, 0.7);
   --text-muted: rgba(255, 255, 255, 0.5);
   
-  --accent-primary: var(--color-verde-yaguarón);
+  --accent-primary: var(--color-verde-primario);
   --accent-secondary: var(--color-naranja-sol);
-  --accent-gradient: linear-gradient(135deg, var(--color-verde-yaguarón) 0%, var(--color-naranja-sol) 100%);
+  --accent-gradient: linear-gradient(135deg, var(--color-verde-primario) 0%, var(--color-naranja-sol) 100%);
   
   --success: var(--color-verde-oscuro);
   --success-bg: rgba(30, 122, 62, 0.12);
@@ -384,7 +384,7 @@ body {
 .blob-1 {
   width: 500px;
   height: 500px;
-  background: var(--color-verde-yaguarón);
+  background: var(--color-verde-primario);
   top: -15%;
   right: -10%;
   animation: floatBlob 8s ease-in-out infinite;

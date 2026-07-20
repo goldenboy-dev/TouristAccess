@@ -85,7 +85,7 @@ describe('printTicket — real TCP wire protocol', () => {
 
       const sent = Buffer.concat(chunks).toString('latin1');
       expect(sent.length).toBeGreaterThan(0);
-      expect(sent).toContain('CERRO YAGUAR'); // header, minus the accented Ó (encoding-sensitive)
+      expect(sent).toContain('SISTEMA DE ENTRADAS'); // default businessName header, uppercased
       expect(sent).toContain('777'); // ticket id
       expect(sent).toContain('tok_'); // token, embedded raw in the QR command payload
     } finally {
