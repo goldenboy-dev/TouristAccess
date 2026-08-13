@@ -11,11 +11,11 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-tests.yml'
 
-# The 183 tests stub Prisma via require.cache (see tests/helpers/cjs-mock.js)
-# and never touch a real database — no postgres service needed here. They do
-# hit real bugs a plain code review misses (see bug 13 in claude.md), but
-# only the ones exercisable without Postgres/Docker; anything that needs the
-# real stack (docker compose up) still has to be verified by hand.
+# The tests stub Prisma via require.cache (see tests/helpers/cjs-mock.js)
+# and never touch a real database — no postgres service needed here. They
+# catch real regressions a plain code review can miss, but only the ones
+# exercisable without Postgres/Docker; anything that needs the real stack
+# (docker compose up) still has to be verified by hand.
 jobs:
   test:
     runs-on: ubuntu-latest

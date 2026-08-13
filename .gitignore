@@ -7,3 +7,12 @@
 # Local database backups (see backend/scripts/backup-db.sh)
 /backups/
 
+# Internal dev notes, not part of the public project
+claude.md
+
+# Internal business/commercial strategy docs — not for the public repo
+contextoestrategico-touristacces.txt
+estrategia_comercial_tourist_access.md
+product_strategy_v1.md
+funcionalidades_beneficios.md
+
